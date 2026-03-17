@@ -1,5 +1,7 @@
 import asyncio
 import itertools
+import random
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -13,67 +15,74 @@ from poke_env.battle.field import Field
 from poke_env.teambuilder import ConstantTeambuilder
 from poke_env import ServerConfiguration
 
-# Regulation F (gen9vgc2024regf) team in Showdown paste format — top meta picks
+# Regulation F (gen9vgc2024regf) team in Showdown paste format
 REGULATION_F_TEAM = """
-Incineroar @ Assault Vest
-Ability: Intimidate
-Level: 50
-EVs: 252 Atk / 132 Def / 124 SpD
-Adamant Nature
-- Fake Out
-- Knock Off
-- Flare Blitz
-- Parting Shot
-
-Flutter Mane @ Booster Energy
+Brute Bonnet @ Sitrus Berry
 Ability: Protosynthesis
 Level: 50
-EVs: 252 SpA / 4 SpD / 252 Spe
-Modest Nature
-- Moonblast
-- Shadow Ball
-- Dazzling Gleam
-- Protect
-
-Amoonguss @ Sitrus Berry
-Ability: Regenerator
-Level: 50
-EVs: 252 HP / 196 Def / 60 SpD
-Relaxed Nature
-IVs: 0 Atk / 0 Spe
+Tera Type: Water
+EVs: 252 HP / 84 Def / 172 SpD
+Sassy Nature
+IVs: 0 Spe
+- Seed Bomb
+- Sucker Punch
 - Spore
 - Rage Powder
-- Pollen Puff
-- Protect
 
-Urshifu-Rapid-Strike @ Choice Band
-Ability: Unseen Fist
+Lunala @ Power Herb
+Ability: Shadow Shield
 Level: 50
-EVs: 252 Atk / 4 Def / 252 Spe
-Jolly Nature
-- Surging Strikes
-- Close Combat
-- Aqua Jet
-- U-turn
-
-Tornadus @ Focus Sash
-Ability: Prankster
-Level: 50
-EVs: 4 HP / 252 SpA / 252 Spe
+Tera Type: Water
+EVs: 228 HP / 4 Def / 20 SpA / 4 SpD / 252 Spe
 Timid Nature
-- Bleakwind Storm
-- Tailwind
-- Taunt
+- Moongeist Beam
+- Meteor Beam
+- Wide Guard
+- Trick Room
+
+Ursaluna @ Flame Orb
+Ability: Guts
+Level: 50
+Tera Type: Ghost
+EVs: 252 HP / 196 Atk / 60 SpD
+Brave Nature
+IVs: 0 Spe
+- Headlong Rush
+- Facade
+- Earthquake
 - Protect
 
-Chi-Yu @ Choice Specs
+Chi-Yu @ Choice Scarf
 Ability: Beads of Ruin
 Level: 50
-EVs: 4 Def / 252 SpA / 252 Spe
-Modest Nature
-- Heat Wave
+Tera Type: Ghost
+EVs: 4 HP / 252 SpA / 252 Spe
+Timid Nature
 - Dark Pulse
-- Flamethrower
+- Heat Wave
+- Overheat
+- Snarl
+
+Koraidon @ Life Orb
+Ability: Orichalcum Pulse
+Level: 50
+Tera Type: Fire
+EVs: 4 HP / 252 Atk / 252 Spe
+Jolly Nature
+- Close Combat
+- Flare Blitz
+- Flame Charge
+- Protect
+
+Flutter Mane @ Focus Sash
+Ability: Protosynthesis
+Level: 50
+Tera Type: Stellar
+EVs: 4 HP / 252 SpA / 252 Spe
+Timid Nature
+- Shadow Ball
+- Moonblast
+- Icy Wind
 - Protect
 """
 
@@ -82,9 +91,13 @@ STAT_ORDER = ["atk", "def", "spa", "spd", "spe"]
 WEATHER_ORDER = list(Weather)
 TERRAIN_FIELDS = [f for f in Field if f != Field.UNKNOWN and f.is_terrain]
 
+from poke_env.battle.double_battle import DoubleBattle
 if TYPE_CHECKING:
-    from poke_env.battle.double_battle import DoubleBattle
     from poke_env.battle.pokemon import Pokemon
+
+# Value network (must match train_value_model.py)
+VGC_VALUE_MODEL_PATH = Path(__file__).resolve().parent / "vgc_value_model.pth"
+VGC_VALUE_SCALER_PATH = Path(__file__).resolve().parent / "vgc_value_scaler.pkl"
 
 
 def _score_from_state(
@@ -110,6 +123,57 @@ class SmartBot(Player):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.history: list[tuple[np.ndarray, int]] = []
+        self.won: bool | None = None
+        self._value_model = None
+        self._value_scaler = None
+        self._value_model_n_features = None
+        self._load_value_model()
+
+    def _load_value_model(self) -> None:
+        """Load vgc_value_model.pth and vgc_value_scaler.pkl for NN move scoring if present."""
+        if not VGC_VALUE_MODEL_PATH.is_file() or not VGC_VALUE_SCALER_PATH.is_file():
+            return
+        try:
+            import joblib
+            import torch
+
+            class _ValueMLP(torch.nn.Module):
+                def __init__(self, n: int):
+                    super().__init__()
+                    self.layers = torch.nn.Sequential(
+                        torch.nn.Linear(n, 128),
+                        torch.nn.ReLU(),
+                        torch.nn.Linear(128, 64),
+                        torch.nn.ReLU(),
+                        torch.nn.Linear(64, 1),
+                        torch.nn.Sigmoid(),
+                    )
+
+                def forward(self, x):
+                    return self.layers(x).squeeze(-1)
+
+            self._value_scaler = joblib.load(VGC_VALUE_SCALER_PATH)
+            self._value_model_n_features = self._value_scaler.n_features_in_
+            self._value_model = _ValueMLP(self._value_model_n_features)
+            self._value_model.load_state_dict(torch.load(VGC_VALUE_MODEL_PATH, map_location="cpu", weights_only=True))
+            self._value_model.eval()
+        except Exception:
+            self._value_model = None
+            self._value_scaler = None
+            self._value_model_n_features = None
+
+    def teampreview(self, battle: AbstractBattle) -> str:
+        """Pick 4 Pokémon at random and shuffle their order for varied lead scenarios in training."""
+        # Slots 1–6; pick 4 at random, then shuffle so leads/back vary every battle
+        members = random.sample(range(1, 7), 4)
+        random.shuffle(members)
+
+        our_team_list = getattr(battle, "teampreview_team", None) or list(battle.team.values())
+        for idx in members:
+            i = idx - 1
+            if 0 <= i < len(our_team_list):
+                our_team_list[i]._selected_in_teampreview = True
+        return "/team " + "".join(str(m) for m in members)
 
     def _evaluate_board(self, battle: AbstractBattle) -> float:
         """Return a numerical score for the current battle state.
@@ -130,21 +194,17 @@ class SmartBot(Player):
         tailwind_ours = SideCondition.TAILWIND in battle.side_conditions
         return _score_from_state(our_alive, opp_alive, our_hp_pct, opp_hp_pct, tailwind_ours)
 
-    def embed_battle(self, battle: AbstractBattle) -> np.ndarray:
-        """Embed battle state as a single vector for ML: 4 active Pokémon, each with HP%, 5 stat boosts,
-        one-hot weather, one-hot terrain, and terastallized flag. Mimics a damage-calc view.
-        """
-        # Normalize to 4 slots: [our0, our1, opp0, opp1] (singles: our1 and opp1 are None)
-        if battle.format_is_doubles:
-            our_active = list(battle.active_pokemon) if battle.active_pokemon else [None, None]
-            opp_active = list(battle.opponent_active_pokemon) if battle.opponent_active_pokemon else [None, None]
-            while len(our_active) < 2:
-                our_active.append(None)
-            while len(opp_active) < 2:
-                opp_active.append(None)
-        else:
-            our_active = [getattr(battle, "active_pokemon", None), None]
-            opp_active = [getattr(battle, "opponent_active_pokemon", None), None]
+    def embed_battle(
+        self, battle: AbstractBattle, override_hp: tuple[float, float, float, float] | None = None
+    ) -> np.ndarray:
+        """Embed battle state as a single vector for ML. override_hp: optional (our0, our1, opp0, opp1) to use simulated HP."""
+        # Normalize to 4 slots: [our0, our1, opp0, opp1]
+        our_active = list(battle.active_pokemon) if battle.active_pokemon else [None, None]
+        opp_active = list(battle.opponent_active_pokemon) if battle.opponent_active_pokemon else [None, None]
+        while len(our_active) < 2:
+            our_active.append(None)
+        while len(opp_active) < 2:
+            opp_active.append(None)
         slots = [our_active[0], our_active[1], opp_active[0], opp_active[1]]
 
         # Global weather and terrain (one-hot each)
@@ -161,14 +221,23 @@ class SmartBot(Player):
                     terrain_onehot[TERRAIN_FIELDS.index(f)] = 1.0
                     break
 
+        # Explicit global effects for ML (e.g. Koraidon sun, Trick Room)
+        sun_active = 1.0 if Weather.SUNNYDAY in battle.weather else 0.0
+        trick_room_active = 1.0 if Field.TRICK_ROOM in battle.fields else 0.0
+        global_effects = np.array([sun_active, trick_room_active], dtype=np.float32)
+
         per_slot = []
-        for mon in slots:
-            if mon is None or mon.fainted:
+        for i, mon in enumerate(slots):
+            if override_hp is not None and i < 4:
+                hp_pct = float(override_hp[i])
+            elif mon is None or mon.fainted:
                 hp_pct = 0.0
+            else:
+                hp_pct = float(mon.current_hp_fraction)
+            if mon is None or mon.fainted:
                 boosts_norm = np.zeros(5, dtype=np.float32)
                 tera = 0.0
             else:
-                hp_pct = float(mon.current_hp_fraction)
                 boosts = mon.boosts
                 boosts_norm = np.array(
                     [(boosts.get(s, 0) + 6) / 12.0 for s in STAT_ORDER],
@@ -181,6 +250,7 @@ class SmartBot(Player):
                 weather_onehot,
                 terrain_onehot,
                 np.array([tera], dtype=np.float32),
+                global_effects,
             ]))
         return np.concatenate(per_slot)
 
@@ -188,26 +258,26 @@ class SmartBot(Player):
         # Data logging: embed current state and turn for ML
         vec = self.embed_battle(battle)
         self.history.append((vec, battle.turn))
-        # Singles: available_moves is a list; Doubles: list of two lists per active mon
-        if battle.format_is_doubles:
-            return self._choose_doubles_move(battle)
-        return self._choose_singles_move(battle)
+        return self._choose_doubles_move(battle)
 
     def _choose_singles_move(self, battle: AbstractBattle) -> BattleOrder:
-        moves = battle.available_moves
-        opponent = battle.opponent_active_pokemon
-
-        if not moves:
+        # Treat switches as valid orders alongside moves: score each and pick best
+        valid = battle.valid_orders
+        if not valid:
             return self.choose_random_move(battle)
-        if opponent is None or opponent.fainted:
-            return Player.create_order(moves[0])
-
-        # Type effectiveness of each move against the opponent
-        effectiveness = np.array([opponent.damage_multiplier(move) for move in moves])
-        # Rank by effectiveness (highest first); break ties by index with stable sort
-        ranks = np.argsort(-effectiveness, kind="stable")
-        best_idx = int(ranks[0])
-        return Player.create_order(moves[best_idx])
+        opponent = battle.opponent_active_pokemon
+        scores = []
+        for order in valid:
+            if isinstance(order.order, Move):
+                if opponent is None or opponent.fainted:
+                    score = 1.0
+                else:
+                    score = 50.0 * opponent.damage_multiplier(order.order)
+            else:
+                score = self._evaluate_board(battle)
+            scores.append(score)
+        best_idx = int(np.argmax(scores))
+        return valid[best_idx]
 
     def _estimate_damage_fraction(
         self, move: Move, target: "Pokemon | None"
@@ -408,7 +478,8 @@ class SmartBot(Player):
         opp_hp_pct_sim = opp_hp_pct_total - active_contrib_opp + opp_hp[0] + opp_hp[1]
         opp_hp_pct_sim = max(0.0, opp_hp_pct_sim)
 
-        return _score_from_state(our_alive, opp_alive, our_hp_pct_sim, opp_hp_pct_sim, tailwind_ours)
+        score = _score_from_state(our_alive, opp_alive, our_hp_pct_sim, opp_hp_pct_sim, tailwind_ours)
+        return (score, our_hp, opp_hp)
 
     def _risk_adjusted_score(
         self,
@@ -431,22 +502,24 @@ class SmartBot(Player):
             if isinstance(second_order.order, Move)
             else 1.0
         )
-        s_hit_hit = self._simulate_full_turn(
+        r_hit_hit = self._simulate_full_turn(
             battle, first_order, second_order, opp_target_0, opp_target_1,
             force_miss_0=False, force_miss_1=False,
         )
-        s_hit_miss = self._simulate_full_turn(
+        r_hit_miss = self._simulate_full_turn(
             battle, first_order, second_order, opp_target_0, opp_target_1,
             force_miss_0=False, force_miss_1=True,
         )
-        s_miss_hit = self._simulate_full_turn(
+        r_miss_hit = self._simulate_full_turn(
             battle, first_order, second_order, opp_target_0, opp_target_1,
             force_miss_0=True, force_miss_1=False,
         )
-        s_miss_miss = self._simulate_full_turn(
+        r_miss_miss = self._simulate_full_turn(
             battle, first_order, second_order, opp_target_0, opp_target_1,
             force_miss_0=True, force_miss_1=True,
         )
+        s_hit_hit, s_hit_miss = r_hit_hit[0], r_hit_miss[0]
+        s_miss_hit, s_miss_miss = r_miss_hit[0], r_miss_miss[0]
         expected = (
             acc1 * acc2 * s_hit_hit
             + acc1 * (1 - acc2) * s_hit_miss
@@ -472,20 +545,48 @@ class SmartBot(Player):
         if not valid or not valid[0] or not valid[1]:
             return self.choose_random_doubles_move(battle)
 
-        # Minimax + risk: we pick the move pair whose worst-case (after opponent best-response) is best.
-        # Each (our moves, opp targets) is scored with risk assessment: we evaluate hit and miss futures
-        # and blend expected score with worst outcome, so missing a move that would save us is penalized.
-        OPP_TARGETS = [(0, 0), (0, 1), (1, 0), (1, 1)]  # (opp0 targets our slot, opp1 targets our slot)
-        best_worst_score = float("-inf")
-        best_order = None
-        for o1, o2 in itertools.product(valid[0], valid[1]):
-            worst_score = min(
-                self._risk_adjusted_score(battle, o1, o2, t0, t1)
-                for t0, t1 in OPP_TARGETS
-            )
-            if worst_score > best_worst_score:
-                best_worst_score = worst_score
-                best_order = (o1, o2)
+        OPP_TARGETS = [(0, 0), (0, 1), (1, 0), (1, 1)]
+
+        if self._value_model is not None and self._value_scaler is not None:
+            # NN: pick (o1, o2) with highest worst-case win probability over opponent responses
+            import torch
+            best_prob = float("-inf")
+            best_order = None
+            with torch.no_grad():
+                for o1, o2 in itertools.product(valid[0], valid[1]):
+                    probs = []
+                    for t0, t1 in OPP_TARGETS:
+                        _, our_hp, opp_hp = self._simulate_full_turn(
+                            battle, o1, o2, t0, t1,
+                            force_miss_0=False, force_miss_1=False,
+                        )
+                        emb = self.embed_battle(
+                            battle,
+                            override_hp=(our_hp[0], our_hp[1], opp_hp[0], opp_hp[1]),
+                        )
+                        if emb.shape[0] != self._value_model_n_features:
+                            probs.append(0.5)
+                            continue
+                        X = self._value_scaler.transform(emb.reshape(1, -1)).astype("float32")
+                        t = torch.tensor(X)
+                        p = self._value_model(t).item()
+                        probs.append(p)
+                    worst_prob = min(probs)
+                    if worst_prob > best_prob:
+                        best_prob = worst_prob
+                        best_order = (o1, o2)
+        else:
+            # Heuristic minimax + risk: pick order pair whose worst-case (after opponent best-response) is best
+            best_worst_score = float("-inf")
+            best_order = None
+            for o1, o2 in itertools.product(valid[0], valid[1]):
+                worst_score = min(
+                    self._risk_adjusted_score(battle, o1, o2, t0, t1)
+                    for t0, t1 in OPP_TARGETS
+                )
+                if worst_score > best_worst_score:
+                    best_worst_score = worst_score
+                    best_order = (o1, o2)
 
         if best_order is not None:
             return DoubleBattleOrder(best_order[0], best_order[1])
@@ -522,8 +623,13 @@ async def main():
     print("Running 10 battles and logging data...")
     for i in range(10):
         await bot_1.battle_against(bot_2, n_battles=1)
+        # Set win/loss for NN training
+        for b in bot_1.battles.values():
+            if b.finished:
+                bot_1.won = b.won
+                break
         bot_1.save_data(f"battle_{i}.npy")
-        print(f"Battle {i + 1}/10 done, data saved to battle_{i}.npy")
+        print(f"Battle {i + 1}/10 done, won={bot_1.won}, data saved to battle_{i}.npy")
     print("Done!")
 
 if __name__ == "__main__":
