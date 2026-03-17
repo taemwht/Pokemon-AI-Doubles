@@ -55,12 +55,12 @@ async def main():
     for i in range(N_BATTLES):
         await bot_1.battle_against(bot_2, n_battles=1)
 
-        # Who won: from bot_1's perspective (bot_2.won = opposite)
-        for b in bot_1.battles.values():
-            if b.finished:
-                bot_1.won = b.won
-                bot_2.won = not b.won
-                break
+        # Who won in the *latest* battle (previous finished battles stay in bot_1.battles)
+        if bot_1.battles:
+            latest_battle = list(bot_1.battles.values())[-1]
+            if latest_battle.finished:
+                bot_1.won = latest_battle.won
+                bot_2.won = not latest_battle.won
 
         winner_name = bot_1.username if bot_1.won else bot_2.username
         battle_id = i + 1
