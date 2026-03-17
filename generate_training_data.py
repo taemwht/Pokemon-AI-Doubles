@@ -96,14 +96,21 @@ async def main():
     data = np.vstack(all_rows)
     n_features = data.shape[1] - 1
     header = ",".join(f"f{i}" for i in range(n_features)) + ",Target"
-    np.savetxt(
-        OUTPUT_FILE,
-        data,
-        delimiter=",",
-        header=header,
-        comments="",
-    )
-    print(f"Saved {len(all_rows)} rows to {OUTPUT_FILE} (shape {data.shape})")
+
+    # If OUTPUT_FILE exists, append without header; otherwise create with header.
+    import os
+    file_exists = os.path.isfile(OUTPUT_FILE)
+
+    mode = "ab" if file_exists else "wb"
+    with open(OUTPUT_FILE, mode) as f:
+        np.savetxt(
+            f,
+            data,
+            delimiter=",",
+            header=header if not file_exists else "",
+            comments="",
+        )
+    print(f"{'Appended' if file_exists else 'Saved'} {len(all_rows)} rows to {OUTPUT_FILE} (shape {data.shape})")
 
 
 if __name__ == "__main__":

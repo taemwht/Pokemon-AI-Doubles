@@ -623,7 +623,7 @@ class SmartBot(Player):
     # Support moves that affect the ally's damage or board score (used in doubles simulation)
     _HELPING_HAND_MULTIPLIER = 1.5  # in-game: ally's move damage 1.5x
     # Risk assessment: blend of expected score and worst outcome (0 = risk-neutral, higher = more cautious)
-    _RISK_AVERSION = 0.4
+    _RISK_AVERSION = 0.0
 
     def _is_support_move(self, order: SingleBattleOrder) -> bool:
         """True if this order is a support move (e.g. Helping Hand, Tailwind) that benefits the pair."""
@@ -960,6 +960,145 @@ class SmartBot(Player):
 
         OPP_TARGETS = [(0, 0), (0, 1), (1, 0), (1, 1)]
 
+        # --- Fast-KO override: if a mon is faster and has a move that KOs a target, prioritise that line ---
+        from poke_env.stats import compute_raw_stats
+        fast_ko_candidates: list[tuple[int, int, SingleBattleOrder]] = []  # (slot_idx, opp_idx, order)
+        our_active_all = battle.active_pokemon
+        opp_active_all = battle.opponent_active_pokemon
+        for slot_idx in (0, 1):
+            if slot_idx >= len(our_active_all):
+                continue
+            attacker = our_active_all[slot_idx]
+            if attacker is None or attacker.fainted:
+                continue
+            try:
+                atk_spe = compute_raw_stats(
+                    attacker.base_stats,
+                    50,
+                    attacker._gen,
+                    getattr(attacker, "_nature", None),
+                )["spe"]
+            except Exception:
+                continue
+            for order in valid[slot_idx]:
+                if not isinstance(order.order, Move):
+                    continue
+                move = order.order
+                if move.base_power <= 0:
+                    continue
+                # Only consider single-target moves for explicit KO targeting
+                if move.target in {"allAdjacent", "allAdjacentFoes"}:
+                    continue
+                tidx = order.move_target
+                if tidx not in (1, 2):
+                    continue
+                opp_idx = 0 if tidx == 1 else 1
+                if opp_idx >= len(opp_active_all):
+                    continue
+                defender = opp_active_all[opp_idx]
+                if defender is None or defender.fainted:
+                    continue
+                # Skip immune targets
+                try:
+                    if defender.damage_multiplier(move) == 0:
+                        continue
+                except Exception:
+                    continue
+                # Speed check: only consider if we are at least as fast as this defender
+                try:
+                    def_spe = compute_raw_stats(
+                        defender.base_stats,
+                        50,
+                        defender._gen,
+                        getattr(defender, "_nature", None),
+                    )["spe"]
+                except Exception:
+                    continue
+                if atk_spe < def_spe:
+                    continue
+                # Damage check: does this move KO from current HP?
+                frac = self._estimate_damage_fraction(move, attacker, defender, battle)
+                if frac >= defender.current_hp_fraction:
+                    fast_ko_candidates.append((slot_idx, opp_idx, order))
+
+        if fast_ko_candidates:
+            # Pick the first fast-KO candidate and pair it with the other slot's best damage move
+            slot_idx_ko, opp_idx_ko, ko_order = fast_ko_candidates[0]
+            best_other_order: SingleBattleOrder | None = None
+            best_other_dmg = -1.0
+            other_slot = 1 - slot_idx_ko
+            if 0 <= other_slot < len(our_active_all):
+                other_attacker = our_active_all[other_slot]
+                if other_attacker is not None and not other_attacker.fainted:
+                    for order in valid[other_slot]:
+                        if not isinstance(order.order, Move):
+                            continue
+                        move = order.order
+                        if move.base_power <= 0:
+                            continue
+                        # Compute total fraction damage this move would do across both enemy slots
+                        total_frac = 0.0
+                        for opp_idx, defender in enumerate(opp_active_all):
+                            if defender is None or defender.fainted:
+                                continue
+                            try:
+                                if defender.damage_multiplier(move) == 0:
+                                    continue
+                            except Exception:
+                                continue
+                            total_frac += self._estimate_damage_fraction(move, other_attacker, defender, battle)
+                        if total_frac > best_other_dmg:
+                            best_other_dmg = total_frac
+                            best_other_order = order
+
+            if best_other_order is None:
+                # No good partner move; just use the KO order and default on the other slot
+                other_order = valid[1 - slot_idx_ko][0]
+            else:
+                other_order = best_other_order
+
+            if slot_idx_ko == 0:
+                return DoubleBattleOrder(ko_order, other_order)
+            else:
+                return DoubleBattleOrder(other_order, ko_order)
+
+        # Precompute best single-target damage per slot (for 15% pruning rule).
+        # This is global per slot, not per target: we want the bot to prefer
+        # the highest-damage move even if it hits a different opponent.
+        best_dmg_fraction: dict[int, float] = {}
+        for slot_idx in (0, 1):
+            our_active = battle.active_pokemon
+            if slot_idx >= len(our_active):
+                continue
+            attacker = our_active[slot_idx]
+            if attacker is None or attacker.fainted:
+                continue
+            for order in valid[slot_idx]:
+                if not isinstance(order.order, Move):
+                    continue
+                move = order.order
+                # Only consider single-target damaging moves
+                if move.base_power <= 0 or move.target in {"allAdjacent", "allAdjacentFoes"}:
+                    continue
+                tidx = order.move_target
+                if tidx not in (1, 2):
+                    continue
+                opp_idx = 0 if tidx == 1 else 1
+                if opp_idx >= len(battle.opponent_active_pokemon):
+                    continue
+                defender = battle.opponent_active_pokemon[opp_idx]
+                if defender is None or defender.fainted:
+                    continue
+                # Skip immune targets
+                try:
+                    if defender.damage_multiplier(move) == 0:
+                        continue
+                except Exception:
+                    continue
+                frac = self._estimate_damage_fraction(move, attacker, defender, battle)
+                if frac > best_dmg_fraction.get(slot_idx, 0.0):
+                    best_dmg_fraction[slot_idx] = frac
+
         def _is_single_target_enemy_move(order: SingleBattleOrder) -> bool:
             """True if this is a single-target attacking move we intend to send at the opponent."""
             if not isinstance(order.order, Move):
@@ -1004,20 +1143,52 @@ class SmartBot(Player):
                 return False
 
         def _joint_orders():
-            """Yield only joint (o1, o2) pairs that don't try illegal double-switches, self-targeting, or immune targets."""
+            """Yield only joint (o1, o2) pairs of attacking moves (no switching), with valid targets and types."""
             for o1, o2 in itertools.product(valid[0], valid[1]):
-                is_move_1 = isinstance(o1.order, Move)
-                is_move_2 = isinstance(o2.order, Move)
-                # If both orders are non-move (i.e. switches) and target the same thing, skip them.
-                if not is_move_1 and not is_move_2 and o1.order == o2.order:
+                # Ignore any order that is not a damaging move – this disables switching and status for now.
+                if not isinstance(o1.order, Move) or not isinstance(o2.order, Move):
                     continue
+                is_move_1 = True
+                is_move_2 = True
                 # Strictly forbid single-target moves that point at our own side (bad targeting).
                 if _targets_own_side(o1) or _targets_own_side(o2):
                     continue
                 # Also forbid single-target attacks whose chosen target is immune.
                 if _targets_immune_foe(o1) or _targets_immune_foe(o2):
                     continue
-                yield o1, o2
+                # 15% pruning: if this single-target move is much weaker than the best available on this slot, skip it
+                for slot_idx, order in enumerate((o1, o2)):
+                    if not _is_single_target_enemy_move(order):
+                        continue
+                    best = best_dmg_fraction.get(slot_idx, 0.0)
+                    if best > 0.0:
+                        # Estimate this move's fraction again and compare
+                        attacker_list = battle.active_pokemon
+                        if slot_idx >= len(attacker_list):
+                            continue
+                        attacker = attacker_list[slot_idx]
+                        if attacker is None or attacker.fainted:
+                            continue
+                        # Use the move's best damage across all non-immune opponent actives
+                        frac = 0.0
+                        for defender in battle.opponent_active_pokemon:
+                            if defender is None or defender.fainted:
+                                continue
+                            try:
+                                if defender.damage_multiplier(order.order) == 0:
+                                    continue
+                            except Exception:
+                                continue
+                            frac = max(
+                                frac,
+                                self._estimate_damage_fraction(order.order, attacker, defender, battle),
+                            )
+                        if frac < 0.85 * best:
+                            # Too weak compared to best available for this target – drop this joint order
+                            break
+                else:
+                    # Only yield if we didn't break from the 15% pruning loop
+                    yield o1, o2
 
         if self._value_model is not None and self._value_scaler is not None:
             # NN: pick (o1, o2) with highest worst-case win probability over opponent responses
