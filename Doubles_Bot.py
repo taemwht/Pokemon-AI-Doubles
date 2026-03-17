@@ -98,6 +98,62 @@ if TYPE_CHECKING:
 # Value network (must match train_value_model.py)
 VGC_VALUE_MODEL_PATH = Path(__file__).resolve().parent / "vgc_value_model.pth"
 VGC_VALUE_SCALER_PATH = Path(__file__).resolve().parent / "vgc_value_scaler.pkl"
+# Smogon chaos JSON for meta item/ability priors (run download_smogon_chaos.py to fetch)
+CHAOS_JSON_FILENAME = "gen9vgc2026regi-1760.json"
+CHAOS_JSON_PATH = Path(__file__).resolve().parent / CHAOS_JSON_FILENAME
+
+
+class StatInference:
+    """Load gen9vgc2026regi-1760 chaos JSON and map species -> top item / ability for meta priors."""
+
+    def __init__(self, json_path: Path | None = None):
+        self._data: dict = {}
+        path = json_path or CHAOS_JSON_PATH
+        if path.is_file():
+            import json
+            self._data = json.loads(path.read_text(encoding="utf-8")).get("data", {})
+        self._species_key_cache: dict[str, str] = {}
+
+    def _species_key(self, species: str | None) -> str | None:
+        if not species:
+            return None
+        if species in self._species_key_cache:
+            return self._species_key_cache[species]
+        # Chaos JSON keys are Title Case, e.g. "Brute Bonnet", "Chi-Yu", "Flutter Mane"
+        for key in self._data:
+            if key.lower() == species.lower():
+                self._species_key_cache[species] = key
+                return key
+        # Try with hyphen/space normalized
+        normalized = species.replace("-", " ").strip()
+        for key in self._data:
+            if key.lower() == normalized.lower():
+                self._species_key_cache[species] = key
+                return key
+        self._species_key_cache[species] = None
+        return None
+
+    def get_prior_item(self, species: str | None) -> str | None:
+        """Most common item for this species in 1760 chaos; None if unknown or not in stats."""
+        key = self._species_key(species)
+        if not key:
+            return None
+        items = self._data.get(key, {}).get("Items") or {}
+        if not items:
+            return None
+        best = max(items.items(), key=lambda x: x[1])
+        return best[0] if best[0].lower() != "nothing" else None
+
+    def get_prior_ability(self, species: str | None) -> str | None:
+        """Most common ability for this species in 1760 chaos; None if unknown or not in stats."""
+        key = self._species_key(species)
+        if not key:
+            return None
+        abilities = self._data.get(key, {}).get("Abilities") or {}
+        if not abilities:
+            return None
+        best = max(abilities.items(), key=lambda x: x[1])
+        return best[0] or None
 
 
 def _score_from_state(
@@ -127,7 +183,34 @@ class SmartBot(Player):
         self._value_model = None
         self._value_scaler = None
         self._value_model_n_features = None
+        # Mapping from item string -> numeric id for embed_battle
+        self._item_id_map: dict[str, int] = {}
+        self._ability_id_map: dict[str, int] = {}
+        self._next_item_id: int = 1
+        self._next_ability_id: int = 1
+        self._stat_inference = StatInference()
+        # Deterministic stat solver tracking (per-opponent mon)
+        # key: mon.identifier or species-based key; value: dict with fields like max_hp_locked, last_hp
+        self.opponent_data: dict[str, dict[str, int]] = {}
         self._load_value_model()
+
+    def _get_item_id(self, item: str | None) -> float:
+        """Map a revealed item string to a stable numeric id (0 if unknown)."""
+        if not item:
+            return 0.0
+        if item not in self._item_id_map:
+            self._item_id_map[item] = self._next_item_id
+            self._next_item_id += 1
+        return float(self._item_id_map[item])
+
+    def _get_ability_id(self, ability: str | None) -> float:
+        """Map an ability string to a stable numeric id (0 if unknown)."""
+        if not ability:
+            return 0.0
+        if ability not in self._ability_id_map:
+            self._ability_id_map[ability] = self._next_ability_id
+            self._next_ability_id += 1
+        return float(self._ability_id_map[ability])
 
     def _load_value_model(self) -> None:
         """Load vgc_value_model.pth and vgc_value_scaler.pkl for NN move scoring if present."""
@@ -176,10 +259,11 @@ class SmartBot(Player):
         return "/team " + "".join(str(m) for m in members)
 
     def _evaluate_board(self, battle: AbstractBattle) -> float:
-        """Return a numerical score for the current battle state.
+        """Return a numerical score for the current battle state with emphasis on HP preservation and speed control.
         +100 per our Pokémon alive, -100 per opponent alive;
-        +50 * (our total HP fraction), -50 * (opponent total HP fraction);
-        +30 if Tailwind is active on our side.
+        +80 * (our total HP fraction), -60 * (opponent total HP fraction);
+        +40 if Tailwind is active on our side;
+        +40 if Trick Room is active and we are the slower team.
         """
         our_alive = sum(1 for p in battle.team.values() if not p.fainted)
         opp_alive = sum(1 for p in battle.opponent_team.values() if not p.fainted)
@@ -192,13 +276,68 @@ class SmartBot(Player):
             if not p.fainted
         )
         tailwind_ours = SideCondition.TAILWIND in battle.side_conditions
-        return _score_from_state(our_alive, opp_alive, our_hp_pct, opp_hp_pct, tailwind_ours)
+
+        # Simple heuristic for "we are slower" under Trick Room: compare average Spe base stat
+        trick_room_active = Field.TRICK_ROOM in battle.fields
+        if trick_room_active:
+            from poke_env.stats import compute_raw_stats
+            try:
+                our_spe = [
+                    compute_raw_stats(p.base_stats, 50, p._gen, getattr(p, "_nature", None))["spe"]
+                    for p in battle.team.values()
+                    if not p.fainted
+                ]
+                opp_spe = [
+                    compute_raw_stats(p.base_stats, 50, p._gen, getattr(p, "_nature", None))["spe"]
+                    for p in battle.opponent_team.values()
+                    if not p.fainted
+                ]
+                we_are_slower = (sum(our_spe) / max(1, len(our_spe))) < (sum(opp_spe) / max(1, len(opp_spe)))
+            except Exception:
+                we_are_slower = False
+        else:
+            we_are_slower = False
+
+        base_score = _score_from_state(our_alive, opp_alive, our_hp_pct, opp_hp_pct, tailwind_ours)
+        # Reweight HP: applied via coefficients above, plus Trick Room bonus when in our favour
+        if trick_room_active and we_are_slower:
+            base_score += 40.0
+        return base_score
 
     def embed_battle(
         self, battle: AbstractBattle, override_hp: tuple[float, float, float, float] | None = None
     ) -> np.ndarray:
         """Embed battle state as a single vector for ML. override_hp: optional (our0, our1, opp0, opp1) to use simulated HP."""
-        # Normalize to 4 slots: [our0, our1, opp0, opp1]
+        # Update opponent_data with latest HP observations (foundation for exact-stat HP solver)
+        for mon in battle.opponent_team.values():
+            if mon is None:
+                continue
+            key = mon.species or ""
+            info = self.opponent_data.setdefault(key, {})
+            cur_hp = getattr(mon, "current_hp", None)
+            if cur_hp is None:
+                continue
+            last_hp = info.get("last_hp")
+            if last_hp is not None and cur_hp != last_hp:
+                delta = cur_hp - last_hp
+                if "max_hp_locked" not in info:
+                    abs_delta = abs(delta)
+                    if abs_delta > 0:
+                        hp16 = abs_delta * 16
+                        hp10 = abs_delta * 10
+                        true_max = getattr(mon, "max_hp", 0)
+                        cand = None
+                        if true_max and abs(true_max - hp16) < abs(true_max - hp10):
+                            cand = hp16
+                        elif true_max and abs(true_max - hp10) < abs(true_max - hp16):
+                            cand = hp10
+                        else:
+                            cand = hp16
+                        if cand:
+                            info["max_hp_locked"] = int(cand)
+            info["last_hp"] = cur_hp
+
+        # Normalize to 4 slots: [our0, our1, opp0, opp0]
         our_active = list(battle.active_pokemon) if battle.active_pokemon else [None, None]
         opp_active = list(battle.opponent_active_pokemon) if battle.opponent_active_pokemon else [None, None]
         while len(our_active) < 2:
@@ -252,7 +391,42 @@ class SmartBot(Player):
                 np.array([tera], dtype=np.float32),
                 global_effects,
             ]))
-        return np.concatenate(per_slot)
+
+        base_vec = np.concatenate(per_slot)
+
+        # Opponent bench / revealed info: 6 mons * (item flag, ability flag, item id, ability id). When hidden, fill from 1760 meta.
+        opp_mons = list(battle.opponent_team.values())
+        while len(opp_mons) < 6:
+            opp_mons.append(None)
+        opp_placeholders = []
+        for mon in opp_mons[:6]:
+            if mon is None:
+                item_flag = 0.0
+                ability_flag = 0.0
+                item_id = 0.0
+                ability_id = 0.0
+            else:
+                item = getattr(mon, "item", None)
+                ability = getattr(mon, "ability", None)
+                species = getattr(mon, "species", None)
+                item_flag = 1.0 if item else 0.0
+                ability_flag = 1.0 if ability else 0.0
+                if item:
+                    item_id = self._get_item_id(item)
+                else:
+                    prior_item = self._stat_inference.get_prior_item(species)
+                    item_id = self._get_item_id(prior_item) if prior_item else 0.0
+                if ability:
+                    ability_id = self._get_ability_id(ability)
+                else:
+                    prior_ability = self._stat_inference.get_prior_ability(species)
+                    ability_id = self._get_ability_id(prior_ability) if prior_ability else 0.0
+            opp_placeholders.append(
+                np.array([item_flag, ability_flag, item_id, ability_id], dtype=np.float32)
+            )
+
+        opp_vec = np.concatenate(opp_placeholders) if opp_placeholders else np.zeros(24, dtype=np.float32)
+        return np.concatenate([base_vec, opp_vec])
 
     def choose_move(self, battle: AbstractBattle) -> BattleOrder:
         # Data logging: embed current state and turn for ML
@@ -279,26 +453,172 @@ class SmartBot(Player):
         best_idx = int(np.argmax(scores))
         return valid[best_idx]
 
+    def calculate_damage_range(
+        self,
+        power: int,
+        attack: int,
+        defense: int,
+        modifier_numer: int = 1,
+        modifier_denom: int = 1,
+    ) -> list[int]:
+        """Integer-precise Gen 9-style damage for level 50: returns damage for all 16 rolls (85..100)."""
+        level = 50
+        if power <= 0 or attack <= 0 or defense <= 0 or level <= 0:
+            return [0] * 16
+
+        # 1. Base damage (floors at each division, as in-game)
+        # base = floor( floor( floor( ( (2*L/5 + 2) * A * P / D ) / 50 ) ) + 2 )
+        step1 = (2 * level) // 5          # floor(2*L/5)
+        step2 = step1 + 2                 # +2
+        step3 = step2 * attack * power    # * A * P
+        step4 = step3 // defense          # / D
+        step5 = step4 // 50               # / 50
+        base = step5 + 2                  # +2
+
+        # 2. Combined modifier as a single rational multiplier (numer/denom)
+        mod_numer = modifier_numer
+        mod_denom = modifier_denom if modifier_denom > 0 else 1
+
+        damages: list[int] = []
+        for roll in range(85, 101):  # 85..100 inclusive
+            # dmg = floor( floor( base * total_mod ) * roll / 100 )
+            tmp = base * mod_numer // mod_denom
+            dmg = (tmp * roll) // 100
+            damages.append(max(1, int(dmg)))   # damage is at least 1
+
+        return damages
+
+    def get_integer_damage_range(
+        self,
+        attacker: "Pokemon | None",
+        defender: "Pokemon | None",
+        move: Move,
+        battle: AbstractBattle,
+    ) -> list[int]:
+        """Integer-perfect damage range for this move (16 rolls 85..100) using A/D, type and simple weather."""
+        if attacker is None or defender is None or attacker.fainted or defender.fainted:
+            return [0] * 16
+        if move.base_power <= 0:
+            return [0] * 16
+        try:
+            from poke_env.stats import compute_raw_stats
+        except Exception:
+            return [0] * 16
+
+        # Attack / Defense stats from base stats at level 50 (ignore boosts/nature for now if missing)
+        try:
+            atk_stats = compute_raw_stats(
+                attacker.base_stats,
+                50,
+                attacker._gen,
+                getattr(attacker, "_nature", None),
+            )
+            def_stats = compute_raw_stats(
+                defender.base_stats,
+                50,
+                defender._gen,
+                getattr(defender, "_nature", None),
+            )
+        except Exception:
+            return [0] * 16
+
+        atk_stat = atk_stats["atk" if move.category == "physical" else "spa"]
+        def_stat = def_stats["def" if move.category == "physical" else "spd"]
+
+        # Type effectiveness (map to rational)
+        eff = defender.damage_multiplier(move)
+        if eff == 0:
+            return [0] * 16
+        if eff == 0.25:
+            eff_num, eff_den = 1, 4
+        elif eff == 0.5:
+            eff_num, eff_den = 1, 2
+        elif eff == 1:
+            eff_num, eff_den = 1, 1
+        elif eff == 2:
+            eff_num, eff_den = 2, 1
+        elif eff == 4:
+            eff_num, eff_den = 4, 1
+        else:
+            eff_num, eff_den = 1, 1
+
+        # Simple weather modifier (only handle Sun for Fire and Rain for Water, as common cases)
+        weather_num, weather_den = 1, 1
+        try:
+            mtype = getattr(move, "type", None)
+            if Weather.SUNNYDAY in battle.weather and str(mtype).lower() == "fire":
+                weather_num, weather_den = 3, 2
+            elif Weather.RAINDANCE in battle.weather and str(mtype).lower() == "water":
+                weather_num, weather_den = 3, 2
+            elif Weather.RAINDANCE in battle.weather and str(mtype).lower() == "fire":
+                weather_num, weather_den = 1, 2
+        except Exception:
+            pass
+
+        # Combine modifiers
+        mod_num = eff_num * weather_num
+        mod_den = eff_den * weather_den
+        if mod_den <= 0:
+            mod_den = 1
+
+        return self.calculate_damage_range(int(move.base_power), int(atk_stat), max(1, int(def_stat)), mod_num, mod_den)
+
     def _estimate_damage_fraction(
-        self, move: Move, target: "Pokemon | None"
+        self, move: Move, attacker: "Pokemon | None", target: "Pokemon | None", battle: AbstractBattle
     ) -> float:
-        """Rough estimate of damage as fraction of target's max HP (0..1)."""
-        if target is None or target.fainted:
+        """Estimate damage fraction (0..1) using integer-perfect damage range with type & simple weather."""
+        if target is None or target.fainted or attacker is None or attacker.fainted:
             return 0.0
         if move.base_power == 0:
             return 0.0
-        effectiveness = target.damage_multiplier(move)
-        # Heuristic: (base_power/100) * effectiveness * 0.5 caps around 0.5–1.0 for strong hits
-        return min(1.0, (move.base_power / 100.0) * effectiveness * 0.5)
+        # Immunity check: if target is immune, we treat damage as strictly 0
+        try:
+            if target.damage_multiplier(move) == 0:
+                return 0.0
+        except Exception:
+            pass
+        dmg_values = self.get_integer_damage_range(attacker, target, move, battle)
+        max_dmg = max(dmg_values)
+        max_hp = getattr(target, "max_hp", None) or 0
+        if max_hp <= 0:
+            return 0.0
+        return float(max_dmg) / float(max_hp)
 
     def _estimate_opponent_damage_to_our(
         self, opp_pokemon: "Pokemon | None", our_pokemon: "Pokemon | None"
     ) -> float:
-        """Estimate damage fraction (0..1) from an opponent mon to our mon (STAB, generic BP). Used for minimax."""
+        """Estimate damage fraction (0..1) from an opponent mon to our mon using integer-perfect damage engine,
+        with a safety margin so we play around slightly higher damage than base calc."""
         if not opp_pokemon or not our_pokemon or opp_pokemon.fainted or our_pokemon.fainted:
             return 0.0
-        effectiveness = our_pokemon.damage_multiplier(opp_pokemon.type_1)
-        return min(1.0, (90 / 100.0) * effectiveness * 0.5)
+        # Use a generic 90 BP STAB move into our primary defensive stat
+        from poke_env.stats import compute_raw_stats
+        try:
+            atk_stats = compute_raw_stats(
+                opp_pokemon.base_stats,
+                50,
+                opp_pokemon._gen,
+                opp_pokemon._nature if hasattr(opp_pokemon, "_nature") else None,
+            )
+            def_stats = compute_raw_stats(
+                our_pokemon.base_stats,
+                50,
+                our_pokemon._gen,
+                our_pokemon._nature if hasattr(our_pokemon, "_nature") else None,
+            )
+        except Exception:
+            return 0.0
+        # Very rough: treat it as physical into Defense
+        atk_stat = atk_stats["atk"]
+        def_stat = def_stats["def"]
+        dmg_values = self.calculate_damage_range(90, int(atk_stat), max(1, int(def_stat)), 1, 1)
+        max_dmg = max(dmg_values)
+        # Safety margin: assume they can do ~10% more than our base calculation (but not more than full HP)
+        max_dmg = min(int(max_dmg * 1.1), getattr(our_pokemon, "max_hp", 0) or max_dmg)
+        max_hp = getattr(our_pokemon, "max_hp", None) or 0
+        if max_hp <= 0:
+            return 0.0
+        return float(max_dmg) / float(max_hp)
 
     # Support moves that affect the ally's damage or board score (used in doubles simulation)
     _HELPING_HAND_MULTIPLIER = 1.5  # in-game: ally's move damage 1.5x
@@ -323,8 +643,11 @@ class SmartBot(Player):
         from poke_env.battle.double_battle import DoubleBattle
 
         battle = battle  # type: DoubleBattle
+        our_active = battle.active_pokemon
         our_alive = sum(1 for p in battle.team.values() if not p.fainted)
         opp_alive = sum(1 for p in battle.opponent_team.values() if not p.fainted)
+        initial_opp_alive = opp_alive
+        initial_our_alive = our_alive
         our_hp_pct = sum(
             p.current_hp_fraction for p in battle.team.values() if not p.fainted
         )
@@ -345,6 +668,17 @@ class SmartBot(Player):
         if isinstance(first_order.order, Move) and first_order.order.id == "helpinghand":
             ally_used_helping_hand[1] = True  # slot 0 used HH → boost slot 1's damage
 
+        REDIRECTOR_SPECIES = {"Indeedee-F", "Indeedee", "Amoonguss", "Clefairy", "Togekiss"}
+
+        def _find_redirector_index() -> int:
+            """Heuristic: if a known redirector is on the opponent's field, assume it may use Follow Me / Rage Powder."""
+            for i, mon in enumerate(opp_active):
+                if mon is not None and not mon.fainted and getattr(mon, "species", "") in REDIRECTOR_SPECIES:
+                    return i
+            return -1
+
+        redirect_idx = _find_redirector_index()
+
         def apply_order(order: SingleBattleOrder, slot: int) -> None:
             nonlocal opp_hp, opp_alive, tailwind_ours
             if not isinstance(order.order, Move):
@@ -356,13 +690,22 @@ class SmartBot(Player):
                 return
             tidx = order.move_target
             idx = 0 if tidx == 1 else (1 if tidx == 2 else -1)
+            # If a redirector is present and this is a single-target move, force target to redirector
+            move_target = getattr(move, "target", "")
+            is_spread = move_target in {"allAdjacent", "allAdjacentFoes"}
+            if redirect_idx != -1 and not is_spread:
+                idx = redirect_idx
             if idx < 0 or idx >= len(opp_active) or not opp_active[idx] or opp_active[idx].fainted:
                 return
             target = opp_active[idx]
-            dmg = self._estimate_damage_fraction(move, target)
+            attacker = battle.active_pokemon[slot] if slot < len(battle.active_pokemon) else None
+            dmg = self._estimate_damage_fraction(move, attacker, target, battle)
             dmg *= move.accuracy
             if ally_used_helping_hand[slot]:
                 dmg *= self._HELPING_HAND_MULTIPLIER
+            # Spread move damage is reduced to 75% in doubles
+            if is_spread:
+                dmg *= 0.75
             opp_hp[idx] = max(0.0, opp_hp[idx] - dmg)
             if opp_hp[idx] <= 0:
                 opp_alive -= 1
@@ -378,7 +721,14 @@ class SmartBot(Player):
         opp_hp_pct_sim = opp_hp_pct_total - active_contrib + opp_hp[0] + opp_hp[1]
         opp_hp_pct_sim = max(0.0, opp_hp_pct_sim)
 
-        return _score_from_state(our_alive, opp_alive, our_hp_pct, opp_hp_pct_sim, tailwind_ours)
+        score = _score_from_state(our_alive, opp_alive, our_hp_pct, opp_hp_pct_sim, tailwind_ours)
+        # Kill pressure bonus: reward turns where we KO at least one opponent
+        if opp_alive < initial_opp_alive:
+            score += 80.0
+        # Heuristic guard: massive penalty if we lost one of our Pokémon during our own simulated turn
+        if our_alive < initial_our_alive:
+            score -= 500.0
+        return score
 
     def _simulate_full_turn(
         self,
@@ -402,6 +752,8 @@ class SmartBot(Player):
         opp_active = battle.opponent_active_pokemon
         our_alive = sum(1 for p in battle.team.values() if not p.fainted)
         opp_alive = sum(1 for p in battle.opponent_team.values() if not p.fainted)
+        initial_opp_alive = opp_alive
+        initial_our_alive = our_alive
         our_hp = [
             our_active[0].current_hp_fraction if our_active[0] and not our_active[0].fainted else 0.0,
             our_active[1].current_hp_fraction if our_active[1] and not our_active[1].fainted else 0.0,
@@ -423,6 +775,33 @@ class SmartBot(Player):
             isinstance(first_order.order, Move) and first_order.order.id == "helpinghand" and not force_miss_0,
         ]
 
+        REDIRECTOR_SPECIES = {"Indeedee-F", "Indeedee", "Amoonguss", "Clefairy", "Togekiss"}
+
+        def _find_redirector_index_opp() -> int:
+            for i, mon in enumerate(opp_active):
+                if mon is not None and not mon.fainted and getattr(mon, "species", "") in REDIRECTOR_SPECIES:
+                    return i
+            return -1
+
+        redirect_idx_opp = _find_redirector_index_opp()
+
+        # Simple speed check: who is faster on average this turn?
+        try:
+            from poke_env.stats import compute_raw_stats
+            our_spe = [
+                compute_raw_stats(p.base_stats, 50, p._gen, getattr(p, "_nature", None))["spe"]
+                for p in our_active
+                if p is not None and not p.fainted
+            ]
+            opp_spe = [
+                compute_raw_stats(p.base_stats, 50, p._gen, getattr(p, "_nature", None))["spe"]
+                for p in opp_active
+                if p is not None and not p.fainted
+            ]
+            we_go_first = (sum(our_spe) / max(1, len(our_spe))) >= (sum(opp_spe) / max(1, len(opp_spe)))
+        except Exception:
+            we_go_first = True
+
         def apply_our_order(order: SingleBattleOrder, slot: int, force_miss: bool) -> None:
             nonlocal opp_hp, opp_alive, tailwind_ours
             if force_miss:
@@ -436,31 +815,59 @@ class SmartBot(Player):
                 return
             tidx = order.move_target
             idx = 0 if tidx == 1 else (1 if tidx == 2 else -1)
+            move_target = getattr(move, "target", "")
+            is_spread = move_target in {"allAdjacent", "allAdjacentFoes"}
+            if redirect_idx_opp != -1 and not is_spread:
+                idx = redirect_idx_opp
             if idx < 0 or idx >= len(opp_active) or not opp_active[idx] or opp_active[idx].fainted:
                 return
             target = opp_active[idx]
-            dmg = self._estimate_damage_fraction(move, target)
+            attacker = our_active[slot] if slot < len(our_active) else None
+            dmg = self._estimate_damage_fraction(move, attacker, target, battle)
             if ally_used_helping_hand[slot]:
                 dmg *= self._HELPING_HAND_MULTIPLIER
+            if is_spread:
+                dmg *= 0.75
             opp_hp[idx] = max(0.0, opp_hp[idx] - dmg)
             if opp_hp[idx] <= 0:
                 opp_alive -= 1
 
-        apply_our_order(first_order, 0, force_miss_0)
-        apply_our_order(second_order, 1, force_miss_1)
+        # Depending on who is faster, have opponent act first or second
+        if we_go_first:
+            apply_our_order(first_order, 0, force_miss_0)
+            apply_our_order(second_order, 1, force_miss_1)
 
-        # Opponent turn: each opp mon attacks one of our slots (worst case for us)
-        for opp_slot, our_slot in [(0, opp_target_0), (1, opp_target_1)]:
-            if opp_slot >= len(opp_active) or our_slot >= len(our_active):
-                continue
-            opp_mon = opp_active[opp_slot]
-            our_mon = our_active[our_slot]
-            if not opp_mon or not our_mon or opp_mon.fainted or our_mon.fainted:
-                continue
-            dmg = self._estimate_opponent_damage_to_our(opp_mon, our_mon)
-            our_hp[our_slot] = max(0.0, our_hp[our_slot] - dmg)
-            if our_hp[our_slot] <= 0:
-                our_alive -= 1
+            # Opponent turn: each opp mon attacks one of our slots (worst case for us)
+            for opp_slot, our_slot in [(0, opp_target_0), (1, opp_target_1)]:
+                if opp_slot >= len(opp_active) or our_slot >= len(our_active):
+                    continue
+                opp_mon = opp_active[opp_slot]
+                our_mon = our_active[our_slot]
+                if not opp_mon or not our_mon or opp_mon.fainted or our_mon.fainted:
+                    continue
+                dmg = self._estimate_opponent_damage_to_our(opp_mon, our_mon)
+                our_hp[our_slot] = max(0.0, our_hp[our_slot] - dmg)
+                if our_hp[our_slot] <= 0:
+                    our_alive -= 1
+        else:
+            # Opponent hits first
+            for opp_slot, our_slot in [(0, opp_target_0), (1, opp_target_1)]:
+                if opp_slot >= len(opp_active) or our_slot >= len(our_active):
+                    continue
+                opp_mon = opp_active[opp_slot]
+                our_mon = our_active[our_slot]
+                if not opp_mon or not our_mon or opp_mon.fainted or our_mon.fainted:
+                    continue
+                dmg = self._estimate_opponent_damage_to_our(opp_mon, our_mon)
+                our_hp[our_slot] = max(0.0, our_hp[our_slot] - dmg)
+                if our_hp[our_slot] <= 0:
+                    our_alive -= 1
+
+            # Then our orders, assuming any survivors still act
+            if our_active[0] is not None and not our_active[0].fainted:
+                apply_our_order(first_order, 0, force_miss_0)
+            if our_active[1] is not None and not our_active[1].fainted:
+                apply_our_order(second_order, 1, force_miss_1)
 
         # Recompute our total HP% (replace active slots with simulated)
         active_contrib = sum(
@@ -479,6 +886,12 @@ class SmartBot(Player):
         opp_hp_pct_sim = max(0.0, opp_hp_pct_sim)
 
         score = _score_from_state(our_alive, opp_alive, our_hp_pct_sim, opp_hp_pct_sim, tailwind_ours)
+        # Kill pressure bonus: +80 if we reduced opponent's number of Pokémon
+        if opp_alive < initial_opp_alive:
+            score += 80.0
+        # Massive penalty if our own Pokémon count decreased during our simulated turn
+        if our_alive < initial_our_alive:
+            score -= 500.0
         return (score, our_hp, opp_hp)
 
     def _risk_adjusted_score(
@@ -547,13 +960,72 @@ class SmartBot(Player):
 
         OPP_TARGETS = [(0, 0), (0, 1), (1, 0), (1, 1)]
 
+        def _is_single_target_enemy_move(order: SingleBattleOrder) -> bool:
+            """True if this is a single-target attacking move we intend to send at the opponent."""
+            if not isinstance(order.order, Move):
+                return False
+            move = order.order
+            # Spread moves (e.g. Earthquake, Heat Wave) are allowed to hit both sides – we don't treat them as single-target.
+            if move.target in {"allAdjacent", "allAdjacentFoes"}:
+                return False
+            # Status or non-damaging moves are not considered for strict enemy-only targeting.
+            if move.base_power == 0:
+                return False
+            return True
+
+        def _targets_own_side(order: SingleBattleOrder) -> bool:
+            """Heuristic: treat any single-target move with move_target not 1 or 2 as aiming at our own side."""
+            if not _is_single_target_enemy_move(order):
+                return False
+            tidx = order.move_target
+            # 1 -> opponent_active_pokemon[0], 2 -> opponent_active_pokemon[1]; anything else we treat as invalid (own side)
+            return tidx not in (1, 2)
+
+        def _targets_immune_foe(order: SingleBattleOrder) -> bool:
+            """Return True if this single-target attacking move would hit an immune opponent."""
+            if not _is_single_target_enemy_move(order):
+                return False
+            tidx = order.move_target
+            # 1 -> opp_active[0], 2 -> opp_active[1]
+            if tidx == 1:
+                idx = 0
+            elif tidx == 2:
+                idx = 1
+            else:
+                return False
+            if idx >= len(battle.opponent_active_pokemon):
+                return False
+            defender = battle.opponent_active_pokemon[idx]
+            if defender is None or defender.fainted:
+                return False
+            try:
+                return defender.damage_multiplier(order.order) == 0
+            except Exception:
+                return False
+
+        def _joint_orders():
+            """Yield only joint (o1, o2) pairs that don't try illegal double-switches, self-targeting, or immune targets."""
+            for o1, o2 in itertools.product(valid[0], valid[1]):
+                is_move_1 = isinstance(o1.order, Move)
+                is_move_2 = isinstance(o2.order, Move)
+                # If both orders are non-move (i.e. switches) and target the same thing, skip them.
+                if not is_move_1 and not is_move_2 and o1.order == o2.order:
+                    continue
+                # Strictly forbid single-target moves that point at our own side (bad targeting).
+                if _targets_own_side(o1) or _targets_own_side(o2):
+                    continue
+                # Also forbid single-target attacks whose chosen target is immune.
+                if _targets_immune_foe(o1) or _targets_immune_foe(o2):
+                    continue
+                yield o1, o2
+
         if self._value_model is not None and self._value_scaler is not None:
             # NN: pick (o1, o2) with highest worst-case win probability over opponent responses
             import torch
             best_prob = float("-inf")
             best_order = None
             with torch.no_grad():
-                for o1, o2 in itertools.product(valid[0], valid[1]):
+                for o1, o2 in _joint_orders():
                     probs = []
                     for t0, t1 in OPP_TARGETS:
                         _, our_hp, opp_hp = self._simulate_full_turn(
@@ -579,11 +1051,14 @@ class SmartBot(Player):
             # Heuristic minimax + risk: pick order pair whose worst-case (after opponent best-response) is best
             best_worst_score = float("-inf")
             best_order = None
-            for o1, o2 in itertools.product(valid[0], valid[1]):
+            for o1, o2 in _joint_orders():
                 worst_score = min(
                     self._risk_adjusted_score(battle, o1, o2, t0, t1)
                     for t0, t1 in OPP_TARGETS
                 )
+                # Switching penalty: discourage switches unless they provide a clearly better board
+                if (not isinstance(o1.order, Move)) or (not isinstance(o2.order, Move)):
+                    worst_score -= 15.0
                 if worst_score > best_worst_score:
                     best_worst_score = worst_score
                     best_order = (o1, o2)
