@@ -224,13 +224,53 @@ class ToddlerBot(Player):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.won: bool | None = None
+        # Stores previous opponent active HP fractions so we can print turn-to-turn deltas.
+        self._last_opp_active_hp: dict[str, float] = {}
 
     def teampreview(self, battle: AbstractBattle) -> str:
         members = random.sample(range(1, 7), 4)
         return "/team " + "".join(str(m) for m in members)
 
     def choose_move(self, battle: AbstractBattle) -> BattleOrder:
-        return self._choose_doubles_move(battle)
+        self._log_opponent_hp_delta(battle)
+        order = self._choose_doubles_move(battle)
+        self._last_opp_active_hp = self._opponent_active_hp_snapshot(battle)
+        return order
+
+    def _opponent_active_hp_snapshot(self, battle: AbstractBattle) -> dict[str, float]:
+        snap: dict[str, float] = {}
+        for i, opp in enumerate(getattr(battle, "opponent_active_pokemon", []) or []):
+            if opp is None:
+                continue
+            ident = str(
+                getattr(opp, "ident", None)
+                or getattr(opp, "species", None)
+                or getattr(opp, "name", None)
+                or f"opp_slot_{i}"
+            )
+            hp_frac = float(getattr(opp, "current_hp_fraction", 0.0) or 0.0)
+            snap[ident] = hp_frac
+        return snap
+
+    def _log_opponent_hp_delta(self, battle: AbstractBattle) -> None:
+        current = self._opponent_active_hp_snapshot(battle)
+        if not self._last_opp_active_hp:
+            return
+        printed = False
+        for ident, now_hp in current.items():
+            if ident not in self._last_opp_active_hp:
+                continue
+            prev_hp = self._last_opp_active_hp[ident]
+            if abs(prev_hp - now_hp) < 1e-9:
+                continue
+            delta_pct = (prev_hp - now_hp) * 100.0
+            print(
+                f"[POST CMD HP] opponent={ident} "
+                f"prev={prev_hp:.4f} now={now_hp:.4f} delta={delta_pct:+.2f}%"
+            )
+            printed = True
+        if printed:
+            print("[POST CMD HP] ---")
 
     def _is_immune(self, move: Move, defender) -> bool:
         """Hardcoded immunity check based on defender types."""
@@ -355,9 +395,15 @@ class ToddlerBot(Player):
             elif item in {"choiceband", "choicespecs"}:
                 atk *= 1.5
 
-            # Gen 9 damage formula at level 50
-            base = ((2 * 50 // 5 + 2) * move.base_power * atk // def_) // 50 + 2
+            # Gen 9-style base damage at level 50 using float division.
+            base = (((2 * 50 / 5 + 2) * move.base_power * atk / def_) / 50) + 2
             damage = base * stab * eff
+
+            # Spread move penalty in doubles.
+            target_s = str(getattr(move, "target", "")).lower().replace("_", "")
+            is_spread = ("alladjacentfoes" in target_s) or ("alladjacent" in target_s)
+            if is_spread:
+                damage *= 0.75
 
             # Apply screens at the very end (doubles: 0.5)
             if reflect_on or lightscreen_on:
@@ -370,7 +416,7 @@ class ToddlerBot(Player):
             return -1.0
 
     def _choose_doubles_move(self, battle: AbstractBattle) -> BattleOrder:
-        from poke_env.player.battle_order import DoubleBattleOrder
+        from poke_env.player.battle_order import DoubleBattleOrder, PassBattleOrder
 
         valid = battle.valid_orders
 
@@ -770,31 +816,53 @@ class ToddlerBot(Player):
                 return chosen
             return None
 
+        def _slot_inactive(idx: int) -> bool:
+            if idx >= len(our_active):
+                return True
+            mon = our_active[idx]
+            return mon is None or getattr(mon, "fainted", False)
+
+        def _pass_order_for_slot(idx: int) -> SingleBattleOrder:
+            """Legal no-op for a fainted / empty doubles slot (server expects two commands)."""
+            for o in valid[idx]:
+                if isinstance(o, PassBattleOrder):
+                    return o
+            return PassBattleOrder()
+
         order0 = best_order_for_slot(attacker0, valid[0])
         order1 = best_order_for_slot(attacker1, valid[1])
 
-        if order0 and order1:
-            return DoubleBattleOrder(order0, order1)
+        # Endgame: one survivor vs two foes — still emit a DoubleBattleOrder(move, pass)
+        # or (pass, move). Previously we required both orders non-None and fell through
+        # to choose_default_move(), ignoring the scored best move for the live mon.
+        if _slot_inactive(0):
+            order0 = _pass_order_for_slot(0)
+        else:
+            if order0 is None:
+                pool0 = [
+                    o
+                    for o in valid[0]
+                    if isinstance(getattr(o, "order", None), Move)
+                    and getattr(o.order, "base_power", 0) > 0
+                    and not _is_single_target_ally_attack(o)
+                ]
+                if pool0:
+                    order0 = random.choice(pool0)
 
-        # Last resort: keep same non-ally damaging constraint on each slot.
-        if order0 is None:
-            pool0 = [
-                o for o in valid[0]
-                if isinstance(getattr(o, "order", None), Move)
-                and getattr(o.order, "base_power", 0) > 0
-                and not _is_single_target_ally_attack(o)
-            ]
-            if pool0:
-                order0 = random.choice(pool0)
-        if order1 is None:
-            pool1 = [
-                o for o in valid[1]
-                if isinstance(getattr(o, "order", None), Move)
-                and getattr(o.order, "base_power", 0) > 0
-                and not _is_single_target_ally_attack(o)
-            ]
-            if pool1:
-                order1 = random.choice(pool1)
+        if _slot_inactive(1):
+            order1 = _pass_order_for_slot(1)
+        else:
+            if order1 is None:
+                pool1 = [
+                    o
+                    for o in valid[1]
+                    if isinstance(getattr(o, "order", None), Move)
+                    and getattr(o.order, "base_power", 0) > 0
+                    and not _is_single_target_ally_attack(o)
+                ]
+                if pool1:
+                    order1 = random.choice(pool1)
+
         if order0 and order1:
             return DoubleBattleOrder(order0, order1)
         return self.choose_default_move()
@@ -1041,8 +1109,12 @@ async def main():
         account_configuration=AccountConfiguration(f"OppToddlerBot {suffix2}", ""),
     )
 
-    total_battles = 1
+    total_battles = 200
     print(f"Running {total_battles} battles...")
+
+    toddler_wins = 0
+    opp_wins = 0
+    ties = 0
 
     # Prepare / reset battle_results.csv
     results_path = Path(__file__).with_name("battle_results.csv")
@@ -1053,15 +1125,20 @@ async def main():
         await bot_1.battle_against(bot_2, n_battles=1)
 
         winner_label = "tie"
-        # bot_1.won is from ToddlerBot's perspective.
-        for b in bot_1.battles.values():
-            if b.finished:
-                bot_1.won = b.won
-                break
+        bot_1.won = None
+        finished = [b for b in bot_1.battles.values() if b.finished]
+        if finished:
+            # If multiple (shouldn't happen after reset), use latest battle tag.
+            latest = max(finished, key=lambda b: getattr(b, "battle_tag", ""))
+            bot_1.won = latest.won
         if bot_1.won is True:
             winner_label = "ToddlerBot"
+            toddler_wins += 1
         elif bot_1.won is False:
             winner_label = "OppToddlerBot"
+            opp_wins += 1
+        else:
+            ties += 1
 
         # Append this battle result
         with results_path.open("a", encoding="utf-8") as f:
@@ -1069,7 +1146,19 @@ async def main():
 
         print(f"Battle {i + 1}/{total_battles} done, winner={winner_label}")
 
+        # Only one battle should be "current", but poke-env keeps finished battles in
+        # `battles`; the previous loop + `break` always read the *first* finished
+        # battle (stale). Clear so the next game is tracked correctly.
+        bot_1.reset_battles()
+        bot_2.reset_battles()
+
+    winrate_pct = 100.0 * toddler_wins / total_battles
     print("Done!")
+    print(
+        f"ToddlerBot winrate ({total_battles} battles): "
+        f"{toddler_wins}W / {opp_wins}L / {ties}T → "
+        f"{winrate_pct:.2f}% wins"
+    )
 
 if __name__ == "__main__":
     asyncio.run(main())
