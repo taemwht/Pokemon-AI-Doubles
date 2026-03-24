@@ -1,0 +1,488 @@
+Running 1 battles...
+[CHOOSE SLOT START] attacker=brutebonnet valid_orders=22
+[SCORE SINGLE] attacker=brutebonnet move=seedbomb defender=fluttermane damage_fraction=1.064880
+[ORDER SINGLE SCORE] attacker=brutebonnet move=seedbomb target_idx=1 target_name=fluttermane single_score=1.064880
+[SCORE SINGLE] attacker=brutebonnet move=seedbomb defender=lunala damage_fraction=0.742073
+[ORDER SINGLE SCORE] attacker=brutebonnet move=seedbomb target_idx=2 target_name=lunala single_score=0.742073
+[SCORE SINGLE] attacker=brutebonnet move=suckerpunch defender=fluttermane damage_fraction=0.935520
+[ORDER SINGLE SCORE] attacker=brutebonnet move=suckerpunch target_idx=1 target_name=fluttermane single_score=0.935520
+[SCORE SINGLE] attacker=brutebonnet move=suckerpunch defender=lunala damage_fraction=2.612257
+[ORDER SINGLE SCORE] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=lunala single_score=2.612257
+[ORDER SINGLE SCORE] attacker=brutebonnet move=spore target_idx=1 target_name=fluttermane single_score=-1.000000
+[ORDER SINGLE SCORE] attacker=brutebonnet move=spore target_idx=2 target_name=lunala single_score=-1.000000
+[ORDER SKIP TARGET] attacker=brutebonnet move=ragepowder target_idx=0 target_name=spread_or_none
+[SCORE SINGLE] attacker=brutebonnet move=seedbomb defender=fluttermane damage_fraction=1.064880
+[ORDER SINGLE SCORE] attacker=brutebonnet move=seedbomb target_idx=1 target_name=fluttermane single_score=1.064880
+[SCORE SINGLE] attacker=brutebonnet move=seedbomb defender=lunala damage_fraction=0.742073
+[ORDER SINGLE SCORE] attacker=brutebonnet move=seedbomb target_idx=2 target_name=lunala single_score=0.742073
+[SCORE SINGLE] attacker=brutebonnet move=suckerpunch defender=fluttermane damage_fraction=0.935520
+[ORDER SINGLE SCORE] attacker=brutebonnet move=suckerpunch target_idx=1 target_name=fluttermane single_score=0.935520
+[SCORE SINGLE] attacker=brutebonnet move=suckerpunch defender=lunala damage_fraction=2.612257
+[ORDER SINGLE SCORE] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=lunala single_score=2.612257
+[ORDER SINGLE SCORE] attacker=brutebonnet move=spore target_idx=1 target_name=fluttermane single_score=-1.000000
+[ORDER SINGLE SCORE] attacker=brutebonnet move=spore target_idx=2 target_name=lunala single_score=-1.000000
+[ORDER SKIP TARGET] attacker=brutebonnet move=ragepowder target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=brutebonnet max_single=2.612257 max_spread=-1.000000 prefer_single=True prefer_spread=False tied=False
+[CANDIDATES] attacker=brutebonnet count=2
+[CANDIDATE ORDER] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=lunala
+[CANDIDATE ORDER] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=lunala
+[CHOSEN FROM CANDIDATES] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=lunala
+[CHOOSE SLOT START] attacker=ursaluna valid_orders=18
+[SCORE SINGLE] attacker=ursaluna move=headlongrush defender=fluttermane damage_fraction=2.173680
+[ORDER SINGLE SCORE] attacker=ursaluna move=headlongrush target_idx=1 target_name=fluttermane single_score=2.173680
+[SCORE SINGLE] attacker=ursaluna move=headlongrush defender=lunala damage_fraction=1.505009
+[ORDER SINGLE SCORE] attacker=ursaluna move=headlongrush target_idx=2 target_name=lunala single_score=1.505009
+[SCORE SINGLE] attacker=ursaluna move=facade defender=fluttermane damage_fraction=-1.000000
+[ORDER SINGLE SCORE] attacker=ursaluna move=facade target_idx=1 target_name=fluttermane single_score=-1.000000
+[SCORE SINGLE] attacker=ursaluna move=facade defender=lunala damage_fraction=-1.000000
+[ORDER SINGLE SCORE] attacker=ursaluna move=facade target_idx=2 target_name=lunala single_score=-1.000000
+[SPREAD TEST START] attacker=ursaluna move=earthquake
+[SPREAD TARGET] slot=0 defender=fluttermane damage_fraction=1.362300 contribution=+1.362300
+[SPREAD TARGET] slot=1 defender=lunala damage_fraction=0.944381 contribution=+0.944381
+[SPREAD TEST TOTAL] attacker=ursaluna move=earthquake total=2.306681
+[ORDER SPREAD SCORE] attacker=ursaluna move=earthquake target_idx=0 target_name=spread_or_none spread_score=2.306681
+[ORDER SKIP TARGET] attacker=ursaluna move=protect target_idx=0 target_name=spread_or_none
+[SCORE SINGLE] attacker=ursaluna move=headlongrush defender=fluttermane damage_fraction=2.173680
+[ORDER SINGLE SCORE] attacker=ursaluna move=headlongrush target_idx=1 target_name=fluttermane single_score=2.173680
+[SCORE SINGLE] attacker=ursaluna move=headlongrush defender=lunala damage_fraction=1.505009
+[ORDER SINGLE SCORE] attacker=ursaluna move=headlongrush target_idx=2 target_name=lunala single_score=1.505009
+[SCORE SINGLE] attacker=ursaluna move=facade defender=fluttermane damage_fraction=-1.000000
+[ORDER SINGLE SCORE] attacker=ursaluna move=facade target_idx=1 target_name=fluttermane single_score=-1.000000
+[SCORE SINGLE] attacker=ursaluna move=facade defender=lunala damage_fraction=-1.000000
+[ORDER SINGLE SCORE] attacker=ursaluna move=facade target_idx=2 target_name=lunala single_score=-1.000000
+[SPREAD TEST START] attacker=ursaluna move=earthquake
+[SPREAD TARGET] slot=0 defender=fluttermane damage_fraction=1.362300 contribution=+1.362300
+[SPREAD TARGET] slot=1 defender=lunala damage_fraction=0.944381 contribution=+0.944381
+[SPREAD TEST TOTAL] attacker=ursaluna move=earthquake total=2.306681
+[ORDER SPREAD SCORE] attacker=ursaluna move=earthquake target_idx=0 target_name=spread_or_none spread_score=2.306681
+[ORDER SKIP TARGET] attacker=ursaluna move=protect target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=ursaluna max_single=2.173680 max_spread=2.306681 prefer_single=False prefer_spread=True tied=False
+[CANDIDATES] attacker=ursaluna count=2
+[CANDIDATE ORDER] attacker=ursaluna move=earthquake target_idx=0 target_name=spread_or_none
+[CANDIDATE ORDER] attacker=ursaluna move=earthquake target_idx=0 target_name=spread_or_none
+[CHOSEN FROM CANDIDATES] attacker=ursaluna move=earthquake target_idx=0 target_name=spread_or_none
+[CHOOSE SLOT START] attacker=fluttermane valid_orders=18
+[SCORE SINGLE] attacker=fluttermane move=shadowball defender=brutebonnet damage_fraction=0.429857
+[ORDER SINGLE SCORE] attacker=fluttermane move=shadowball target_idx=1 target_name=brutebonnet single_score=0.429857
+[SCORE SINGLE] attacker=fluttermane move=shadowball defender=ursaluna damage_fraction=-1.000000
+[ORDER SINGLE SCORE] attacker=fluttermane move=shadowball target_idx=2 target_name=ursaluna single_score=-1.000000
+[SCORE SINGLE] attacker=fluttermane move=moonblast defender=brutebonnet damage_fraction=2.030571
+[ORDER SINGLE SCORE] attacker=fluttermane move=moonblast target_idx=1 target_name=brutebonnet single_score=2.030571
+[SCORE SINGLE] attacker=fluttermane move=moonblast defender=ursaluna damage_fraction=1.202490
+[ORDER SINGLE SCORE] attacker=fluttermane move=moonblast target_idx=2 target_name=ursaluna single_score=1.202490
+[SPREAD TEST START] attacker=fluttermane move=icywind
+[SPREAD TARGET] slot=0 defender=brutebonnet damage_fraction=0.600429 contribution=+0.600429
+[SPREAD TARGET] slot=1 defender=ursaluna damage_fraction=0.708810 contribution=+0.708810
+[SPREAD TEST TOTAL] attacker=fluttermane move=icywind total=1.309239
+[ORDER SPREAD SCORE] attacker=fluttermane move=icywind target_idx=0 target_name=spread_or_none spread_score=1.309239
+[ORDER SKIP TARGET] attacker=fluttermane move=protect target_idx=0 target_name=spread_or_none
+[SCORE SINGLE] attacker=fluttermane move=shadowball defender=brutebonnet damage_fraction=0.429857
+[ORDER SINGLE SCORE] attacker=fluttermane move=shadowball target_idx=1 target_name=brutebonnet single_score=0.429857
+[SCORE SINGLE] attacker=fluttermane move=shadowball defender=ursaluna damage_fraction=-1.000000
+[ORDER SINGLE SCORE] attacker=fluttermane move=shadowball target_idx=2 target_name=ursaluna single_score=-1.000000
+[SCORE SINGLE] attacker=fluttermane move=moonblast defender=brutebonnet damage_fraction=2.030571
+[ORDER SINGLE SCORE] attacker=fluttermane move=moonblast target_idx=1 target_name=brutebonnet single_score=2.030571
+[SCORE SINGLE] attacker=fluttermane move=moonblast defender=ursaluna damage_fraction=1.202490
+[ORDER SINGLE SCORE] attacker=fluttermane move=moonblast target_idx=2 target_name=ursaluna single_score=1.202490
+[SPREAD TEST START] attacker=fluttermane move=icywind
+[SPREAD TARGET] slot=0 defender=brutebonnet damage_fraction=0.600429 contribution=+0.600429
+[SPREAD TARGET] slot=1 defender=ursaluna damage_fraction=0.708810 contribution=+0.708810
+[SPREAD TEST TOTAL] attacker=fluttermane move=icywind total=1.309239
+[ORDER SPREAD SCORE] attacker=fluttermane move=icywind target_idx=0 target_name=spread_or_none spread_score=1.309239
+[ORDER SKIP TARGET] attacker=fluttermane move=protect target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=fluttermane max_single=2.030571 max_spread=1.309239 prefer_single=True prefer_spread=False tied=False
+[CANDIDATES] attacker=fluttermane count=2
+[CANDIDATE ORDER] attacker=fluttermane move=moonblast target_idx=1 target_name=brutebonnet
+[CANDIDATE ORDER] attacker=fluttermane move=moonblast target_idx=1 target_name=brutebonnet
+[CHOSEN FROM CANDIDATES] attacker=fluttermane move=moonblast target_idx=1 target_name=brutebonnet
+[CHOOSE SLOT START] attacker=lunala valid_orders=18
+[SCORE SINGLE] attacker=lunala move=moongeistbeam defender=brutebonnet damage_fraction=0.458697
+[ORDER SINGLE SCORE] attacker=lunala move=moongeistbeam target_idx=1 target_name=brutebonnet single_score=0.458697
+[SCORE SINGLE] attacker=lunala move=moongeistbeam defender=ursaluna damage_fraction=-1.000000
+[ORDER SINGLE SCORE] attacker=lunala move=moongeistbeam target_idx=2 target_name=ursaluna single_score=-1.000000
+[SCORE SINGLE] attacker=lunala move=meteorbeam defender=brutebonnet damage_fraction=0.729916
+[ORDER SINGLE SCORE] attacker=lunala move=meteorbeam target_idx=1 target_name=brutebonnet single_score=0.729916
+[SCORE SINGLE] attacker=lunala move=meteorbeam defender=ursaluna damage_fraction=0.432400
+[ORDER SINGLE SCORE] attacker=lunala move=meteorbeam target_idx=2 target_name=ursaluna single_score=0.432400
+[ORDER SKIP TARGET] attacker=lunala move=wideguard target_idx=0 target_name=spread_or_none
+[ORDER SKIP TARGET] attacker=lunala move=trickroom target_idx=0 target_name=spread_or_none
+[SCORE SINGLE] attacker=lunala move=moongeistbeam defender=brutebonnet damage_fraction=0.458697
+[ORDER SINGLE SCORE] attacker=lunala move=moongeistbeam target_idx=1 target_name=brutebonnet single_score=0.458697
+[SCORE SINGLE] attacker=lunala move=moongeistbeam defender=ursaluna damage_fraction=-1.000000
+[ORDER SINGLE SCORE] attacker=lunala move=moongeistbeam target_idx=2 target_name=ursaluna single_score=-1.000000
+[SCORE SINGLE] attacker=lunala move=meteorbeam defender=brutebonnet damage_fraction=0.729916
+[ORDER SINGLE SCORE] attacker=lunala move=meteorbeam target_idx=1 target_name=brutebonnet single_score=0.729916
+[SCORE SINGLE] attacker=lunala move=meteorbeam defender=ursaluna damage_fraction=0.432400
+[ORDER SINGLE SCORE] attacker=lunala move=meteorbeam target_idx=2 target_name=ursaluna single_score=0.432400
+[ORDER SKIP TARGET] attacker=lunala move=wideguard target_idx=0 target_name=spread_or_none
+[ORDER SKIP TARGET] attacker=lunala move=trickroom target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=lunala max_single=0.729916 max_spread=-1.000000 prefer_single=True prefer_spread=False tied=False
+[CANDIDATES] attacker=lunala count=2
+[CANDIDATE ORDER] attacker=lunala move=meteorbeam target_idx=1 target_name=brutebonnet
+[CANDIDATE ORDER] attacker=lunala move=meteorbeam target_idx=1 target_name=brutebonnet
+[CHOSEN FROM CANDIDATES] attacker=lunala move=meteorbeam target_idx=1 target_name=brutebonnet
+[CHOOSE SLOT START] attacker=fluttermane valid_orders=18
+[SCORE SINGLE] attacker=fluttermane move=shadowball defender=brutebonnet damage_fraction=0.429857
+[ORDER SINGLE SCORE] attacker=fluttermane move=shadowball target_idx=1 target_name=brutebonnet single_score=0.429857
+[SCORE SINGLE] attacker=fluttermane move=shadowball defender=ursaluna damage_fraction=-1.000000
+[ORDER SINGLE SCORE] attacker=fluttermane move=shadowball target_idx=2 target_name=ursaluna single_score=-1.000000
+[SCORE SINGLE] attacker=fluttermane move=moonblast defender=brutebonnet damage_fraction=2.030571
+[ORDER SINGLE SCORE] attacker=fluttermane move=moonblast target_idx=1 target_name=brutebonnet single_score=2.030571
+[SCORE SINGLE] attacker=fluttermane move=moonblast defender=ursaluna damage_fraction=1.202490
+[ORDER SINGLE SCORE] attacker=fluttermane move=moonblast target_idx=2 target_name=ursaluna single_score=1.202490
+[SPREAD TEST START] attacker=fluttermane move=icywind
+[SPREAD TARGET] slot=0 defender=brutebonnet damage_fraction=0.600429 contribution=+0.600429
+[SPREAD TARGET] slot=1 defender=ursaluna damage_fraction=0.708810 contribution=+0.708810
+[SPREAD TEST TOTAL] attacker=fluttermane move=icywind total=1.309239
+[ORDER SPREAD SCORE] attacker=fluttermane move=icywind target_idx=0 target_name=spread_or_none spread_score=1.309239
+[ORDER SKIP TARGET] attacker=fluttermane move=protect target_idx=0 target_name=spread_or_none
+[SCORE SINGLE] attacker=fluttermane move=shadowball defender=brutebonnet damage_fraction=0.429857
+[ORDER SINGLE SCORE] attacker=fluttermane move=shadowball target_idx=1 target_name=brutebonnet single_score=0.429857
+[SCORE SINGLE] attacker=fluttermane move=shadowball defender=ursaluna damage_fraction=-1.000000
+[ORDER SINGLE SCORE] attacker=fluttermane move=shadowball target_idx=2 target_name=ursaluna single_score=-1.000000
+[SCORE SINGLE] attacker=fluttermane move=moonblast defender=brutebonnet damage_fraction=2.030571
+[ORDER SINGLE SCORE] attacker=fluttermane move=moonblast target_idx=1 target_name=brutebonnet single_score=2.030571
+[SCORE SINGLE] attacker=fluttermane move=moonblast defender=ursaluna damage_fraction=1.202490
+[ORDER SINGLE SCORE] attacker=fluttermane move=moonblast target_idx=2 target_name=ursaluna single_score=1.202490
+[SPREAD TEST START] attacker=fluttermane move=icywind
+[SPREAD TARGET] slot=0 defender=brutebonnet damage_fraction=0.600429 contribution=+0.600429
+[SPREAD TARGET] slot=1 defender=ursaluna damage_fraction=0.708810 contribution=+0.708810
+[SPREAD TEST TOTAL] attacker=fluttermane move=icywind total=1.309239
+[ORDER SPREAD SCORE] attacker=fluttermane move=icywind target_idx=0 target_name=spread_or_none spread_score=1.309239
+[ORDER SKIP TARGET] attacker=fluttermane move=protect target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=fluttermane max_single=2.030571 max_spread=1.309239 prefer_single=True prefer_spread=False tied=False
+[CANDIDATES] attacker=fluttermane count=2
+[CANDIDATE ORDER] attacker=fluttermane move=moonblast target_idx=1 target_name=brutebonnet
+[CANDIDATE ORDER] attacker=fluttermane move=moonblast target_idx=1 target_name=brutebonnet
+[CHOSEN FROM CANDIDATES] attacker=fluttermane move=moonblast target_idx=1 target_name=brutebonnet
+[CHOOSE SLOT START] attacker=lunala valid_orders=18
+[SCORE SINGLE] attacker=lunala move=moongeistbeam defender=brutebonnet damage_fraction=0.458697
+[ORDER SINGLE SCORE] attacker=lunala move=moongeistbeam target_idx=1 target_name=brutebonnet single_score=0.458697
+[SCORE SINGLE] attacker=lunala move=moongeistbeam defender=ursaluna damage_fraction=-1.000000
+[ORDER SINGLE SCORE] attacker=lunala move=moongeistbeam target_idx=2 target_name=ursaluna single_score=-1.000000
+[SCORE SINGLE] attacker=lunala move=meteorbeam defender=brutebonnet damage_fraction=0.729916
+[ORDER SINGLE SCORE] attacker=lunala move=meteorbeam target_idx=1 target_name=brutebonnet single_score=0.729916
+[SCORE SINGLE] attacker=lunala move=meteorbeam defender=ursaluna damage_fraction=0.432400
+[ORDER SINGLE SCORE] attacker=lunala move=meteorbeam target_idx=2 target_name=ursaluna single_score=0.432400
+[ORDER SKIP TARGET] attacker=lunala move=wideguard target_idx=0 target_name=spread_or_none
+[ORDER SKIP TARGET] attacker=lunala move=trickroom target_idx=0 target_name=spread_or_none
+[SCORE SINGLE] attacker=lunala move=moongeistbeam defender=brutebonnet damage_fraction=0.458697
+[ORDER SINGLE SCORE] attacker=lunala move=moongeistbeam target_idx=1 target_name=brutebonnet single_score=0.458697
+[SCORE SINGLE] attacker=lunala move=moongeistbeam defender=ursaluna damage_fraction=-1.000000
+[ORDER SINGLE SCORE] attacker=lunala move=moongeistbeam target_idx=2 target_name=ursaluna single_score=-1.000000
+[SCORE SINGLE] attacker=lunala move=meteorbeam defender=brutebonnet damage_fraction=0.729916
+[ORDER SINGLE SCORE] attacker=lunala move=meteorbeam target_idx=1 target_name=brutebonnet single_score=0.729916
+[SCORE SINGLE] attacker=lunala move=meteorbeam defender=ursaluna damage_fraction=0.432400
+[ORDER SINGLE SCORE] attacker=lunala move=meteorbeam target_idx=2 target_name=ursaluna single_score=0.432400
+[ORDER SKIP TARGET] attacker=lunala move=wideguard target_idx=0 target_name=spread_or_none
+[ORDER SKIP TARGET] attacker=lunala move=trickroom target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=lunala max_single=0.729916 max_spread=-1.000000 prefer_single=True prefer_spread=False tied=False
+[CANDIDATES] attacker=lunala count=2
+[CANDIDATE ORDER] attacker=lunala move=meteorbeam target_idx=1 target_name=brutebonnet
+[CANDIDATE ORDER] attacker=lunala move=meteorbeam target_idx=1 target_name=brutebonnet
+[CHOSEN FROM CANDIDATES] attacker=lunala move=meteorbeam target_idx=1 target_name=brutebonnet
+[POST CMD HP] opponent=fluttermane prev=1.0000 now=0.0600 delta=+94.00%
+[POST CMD HP] opponent=lunala prev=1.0000 now=0.1900 delta=+81.00%
+[POST CMD HP] ---
+[CHOOSE SLOT START] attacker=brutebonnet valid_orders=12
+[SCORE SINGLE] attacker=brutebonnet move=seedbomb defender=fluttermane damage_fraction=1.064880
+[ORDER SINGLE SCORE] attacker=brutebonnet move=seedbomb target_idx=1 target_name=fluttermane single_score=1.064880
+[SCORE SINGLE] attacker=brutebonnet move=seedbomb defender=lunala damage_fraction=0.742073
+[ORDER SINGLE SCORE] attacker=brutebonnet move=seedbomb target_idx=2 target_name=lunala single_score=0.742073
+[SCORE SINGLE] attacker=brutebonnet move=suckerpunch defender=fluttermane damage_fraction=0.935520
+[ORDER SINGLE SCORE] attacker=brutebonnet move=suckerpunch target_idx=1 target_name=fluttermane single_score=0.935520
+[SCORE SINGLE] attacker=brutebonnet move=suckerpunch defender=lunala damage_fraction=2.612257
+[ORDER SINGLE SCORE] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=lunala single_score=2.612257
+[ORDER SINGLE SCORE] attacker=brutebonnet move=spore target_idx=1 target_name=fluttermane single_score=-1.000000
+[ORDER SINGLE SCORE] attacker=brutebonnet move=spore target_idx=2 target_name=lunala single_score=-1.000000
+[ORDER SKIP TARGET] attacker=brutebonnet move=ragepowder target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=brutebonnet max_single=2.612257 max_spread=-1.000000 prefer_single=True prefer_spread=False tied=False
+[CANDIDATES] attacker=brutebonnet count=1
+[CANDIDATE ORDER] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=lunala
+[CHOSEN FROM CANDIDATES] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=lunala
+[CHOOSE SLOT START] attacker=ursaluna valid_orders=10
+[SCORE SINGLE] attacker=ursaluna move=headlongrush defender=fluttermane damage_fraction=1.449120
+[ORDER SINGLE SCORE] attacker=ursaluna move=headlongrush target_idx=1 target_name=fluttermane single_score=1.449120
+[SCORE SINGLE] attacker=ursaluna move=headlongrush defender=lunala damage_fraction=1.003339
+[ORDER SINGLE SCORE] attacker=ursaluna move=headlongrush target_idx=2 target_name=lunala single_score=1.003339
+[SCORE SINGLE] attacker=ursaluna move=facade defender=fluttermane damage_fraction=-1.000000
+[ORDER SINGLE SCORE] attacker=ursaluna move=facade target_idx=1 target_name=fluttermane single_score=-1.000000
+[SCORE SINGLE] attacker=ursaluna move=facade defender=lunala damage_fraction=-1.000000
+[ORDER SINGLE SCORE] attacker=ursaluna move=facade target_idx=2 target_name=lunala single_score=-1.000000
+[SPREAD TEST START] attacker=ursaluna move=earthquake
+[SPREAD TARGET] slot=0 defender=fluttermane damage_fraction=0.908200 contribution=+0.908200
+[SPREAD TARGET] slot=1 defender=lunala damage_fraction=0.629587 contribution=+0.629587
+[SPREAD TEST TOTAL] attacker=ursaluna move=earthquake total=1.537787
+[ORDER SPREAD SCORE] attacker=ursaluna move=earthquake target_idx=0 target_name=spread_or_none spread_score=1.537787
+[ORDER SKIP TARGET] attacker=ursaluna move=protect target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=ursaluna max_single=1.449120 max_spread=1.537787 prefer_single=False prefer_spread=True tied=False
+[CANDIDATES] attacker=ursaluna count=1
+[CANDIDATE ORDER] attacker=ursaluna move=earthquake target_idx=0 target_name=spread_or_none
+[CHOSEN FROM CANDIDATES] attacker=ursaluna move=earthquake target_idx=0 target_name=spread_or_none
+[POST CMD HP] opponent=brutebonnet prev=1.0000 now=0.0500 delta=+95.00%
+[POST CMD HP] ---
+[CHOOSE SLOT START] attacker=fluttermane valid_orders=18
+[SCORE SINGLE] attacker=fluttermane move=shadowball defender=brutebonnet damage_fraction=0.429857
+[ORDER SINGLE SCORE] attacker=fluttermane move=shadowball target_idx=1 target_name=brutebonnet single_score=0.429857
+[SCORE SINGLE] attacker=fluttermane move=shadowball defender=ursaluna damage_fraction=2.034720
+[ORDER SINGLE SCORE] attacker=fluttermane move=shadowball target_idx=2 target_name=ursaluna single_score=2.034720
+[SCORE SINGLE] attacker=fluttermane move=moonblast defender=brutebonnet damage_fraction=2.030571
+[ORDER SINGLE SCORE] attacker=fluttermane move=moonblast target_idx=1 target_name=brutebonnet single_score=2.030571
+[SCORE SINGLE] attacker=fluttermane move=moonblast defender=ursaluna damage_fraction=1.202490
+[ORDER SINGLE SCORE] attacker=fluttermane move=moonblast target_idx=2 target_name=ursaluna single_score=1.202490
+[SPREAD TEST START] attacker=fluttermane move=icywind
+[SPREAD TARGET] slot=0 defender=brutebonnet damage_fraction=0.600429 contribution=+0.600429
+[SPREAD TARGET] slot=1 defender=ursaluna damage_fraction=0.354405 contribution=+0.354405
+[SPREAD TEST TOTAL] attacker=fluttermane move=icywind total=0.954834
+[ORDER SPREAD SCORE] attacker=fluttermane move=icywind target_idx=0 target_name=spread_or_none spread_score=0.954834
+[ORDER SKIP TARGET] attacker=fluttermane move=protect target_idx=0 target_name=spread_or_none
+[SCORE SINGLE] attacker=fluttermane move=shadowball defender=brutebonnet damage_fraction=0.429857
+[ORDER SINGLE SCORE] attacker=fluttermane move=shadowball target_idx=1 target_name=brutebonnet single_score=0.429857
+[SCORE SINGLE] attacker=fluttermane move=shadowball defender=ursaluna damage_fraction=2.034720
+[ORDER SINGLE SCORE] attacker=fluttermane move=shadowball target_idx=2 target_name=ursaluna single_score=2.034720
+[SCORE SINGLE] attacker=fluttermane move=moonblast defender=brutebonnet damage_fraction=2.030571
+[ORDER SINGLE SCORE] attacker=fluttermane move=moonblast target_idx=1 target_name=brutebonnet single_score=2.030571
+[SCORE SINGLE] attacker=fluttermane move=moonblast defender=ursaluna damage_fraction=1.202490
+[ORDER SINGLE SCORE] attacker=fluttermane move=moonblast target_idx=2 target_name=ursaluna single_score=1.202490
+[SPREAD TEST START] attacker=fluttermane move=icywind
+[SPREAD TARGET] slot=0 defender=brutebonnet damage_fraction=0.600429 contribution=+0.600429
+[SPREAD TARGET] slot=1 defender=ursaluna damage_fraction=0.354405 contribution=+0.354405
+[SPREAD TEST TOTAL] attacker=fluttermane move=icywind total=0.954834
+[ORDER SPREAD SCORE] attacker=fluttermane move=icywind target_idx=0 target_name=spread_or_none spread_score=0.954834
+[ORDER SKIP TARGET] attacker=fluttermane move=protect target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=fluttermane max_single=2.034720 max_spread=0.954834 prefer_single=True prefer_spread=False tied=False
+[CANDIDATES] attacker=fluttermane count=2
+[CANDIDATE ORDER] attacker=fluttermane move=shadowball target_idx=2 target_name=ursaluna
+[CANDIDATE ORDER] attacker=fluttermane move=shadowball target_idx=2 target_name=ursaluna
+[CHOSEN FROM CANDIDATES] attacker=fluttermane move=shadowball target_idx=2 target_name=ursaluna
+[CHOOSE SLOT START] attacker=lunala valid_orders=18
+[SCORE SINGLE] attacker=lunala move=moongeistbeam defender=brutebonnet damage_fraction=0.680546
+[ORDER SINGLE SCORE] attacker=lunala move=moongeistbeam target_idx=1 target_name=brutebonnet single_score=0.680546
+[SCORE SINGLE] attacker=lunala move=moongeistbeam defender=ursaluna damage_fraction=3.228000
+[ORDER SINGLE SCORE] attacker=lunala move=moongeistbeam target_idx=2 target_name=ursaluna single_score=3.228000
+[SCORE SINGLE] attacker=lunala move=meteorbeam defender=brutebonnet damage_fraction=1.084874
+[ORDER SINGLE SCORE] attacker=lunala move=meteorbeam target_idx=1 target_name=brutebonnet single_score=1.084874
+[SCORE SINGLE] attacker=lunala move=meteorbeam defender=ursaluna damage_fraction=1.287200
+[ORDER SINGLE SCORE] attacker=lunala move=meteorbeam target_idx=2 target_name=ursaluna single_score=1.287200
+[ORDER SKIP TARGET] attacker=lunala move=wideguard target_idx=0 target_name=spread_or_none
+[ORDER SKIP TARGET] attacker=lunala move=trickroom target_idx=0 target_name=spread_or_none
+[SCORE SINGLE] attacker=lunala move=moongeistbeam defender=brutebonnet damage_fraction=0.680546
+[ORDER SINGLE SCORE] attacker=lunala move=moongeistbeam target_idx=1 target_name=brutebonnet single_score=0.680546
+[SCORE SINGLE] attacker=lunala move=moongeistbeam defender=ursaluna damage_fraction=3.228000
+[ORDER SINGLE SCORE] attacker=lunala move=moongeistbeam target_idx=2 target_name=ursaluna single_score=3.228000
+[SCORE SINGLE] attacker=lunala move=meteorbeam defender=brutebonnet damage_fraction=1.084874
+[ORDER SINGLE SCORE] attacker=lunala move=meteorbeam target_idx=1 target_name=brutebonnet single_score=1.084874
+[SCORE SINGLE] attacker=lunala move=meteorbeam defender=ursaluna damage_fraction=1.287200
+[ORDER SINGLE SCORE] attacker=lunala move=meteorbeam target_idx=2 target_name=ursaluna single_score=1.287200
+[ORDER SKIP TARGET] attacker=lunala move=wideguard target_idx=0 target_name=spread_or_none
+[ORDER SKIP TARGET] attacker=lunala move=trickroom target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=lunala max_single=3.228000 max_spread=-1.000000 prefer_single=True prefer_spread=False tied=False
+[CANDIDATES] attacker=lunala count=2
+[CANDIDATE ORDER] attacker=lunala move=moongeistbeam target_idx=2 target_name=ursaluna
+[CANDIDATE ORDER] attacker=lunala move=moongeistbeam target_idx=2 target_name=ursaluna
+[CHOSEN FROM CANDIDATES] attacker=lunala move=moongeistbeam target_idx=2 target_name=ursaluna
+[POST CMD HP] opponent=ursaluna prev=1.0000 now=0.2500 delta=+75.00%
+[POST CMD HP] ---
+[CHOOSE SLOT START] attacker=koraidon valid_orders=11
+[SCORE SINGLE] attacker=koraidon move=closecombat defender=brutebonnet damage_fraction=3.295886
+[ORDER SINGLE SCORE] attacker=koraidon move=closecombat target_idx=1 target_name=brutebonnet single_score=3.295886
+[SCORE SINGLE] attacker=koraidon move=closecombat defender=chiyu damage_fraction=3.910704
+[ORDER SINGLE SCORE] attacker=koraidon move=closecombat target_idx=2 target_name=chiyu single_score=3.910704
+[SCORE SINGLE] attacker=koraidon move=flareblitz defender=brutebonnet damage_fraction=2.197257
+[ORDER SINGLE SCORE] attacker=koraidon move=flareblitz target_idx=1 target_name=brutebonnet single_score=2.197257
+[SCORE SINGLE] attacker=koraidon move=flareblitz defender=chiyu damage_fraction=0.651784
+[ORDER SINGLE SCORE] attacker=koraidon move=flareblitz target_idx=2 target_name=chiyu single_score=0.651784
+[SCORE SINGLE] attacker=koraidon move=flamecharge defender=brutebonnet damage_fraction=0.938857
+[ORDER SINGLE SCORE] attacker=koraidon move=flamecharge target_idx=1 target_name=brutebonnet single_score=0.938857
+[SCORE SINGLE] attacker=koraidon move=flamecharge defender=chiyu damage_fraction=0.277410
+[ORDER SINGLE SCORE] attacker=koraidon move=flamecharge target_idx=2 target_name=chiyu single_score=0.277410
+[ORDER SKIP TARGET] attacker=koraidon move=protect target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=koraidon max_single=3.910704 max_spread=-1.000000 prefer_single=True prefer_spread=False tied=False
+[CANDIDATES] attacker=koraidon count=1
+[CANDIDATE ORDER] attacker=koraidon move=closecombat target_idx=2 target_name=chiyu
+[CHOSEN FROM CANDIDATES] attacker=koraidon move=closecombat target_idx=2 target_name=chiyu
+[CHOOSE SLOT START] attacker=ursaluna valid_orders=9
+[SCORE SINGLE] attacker=ursaluna move=headlongrush defender=brutebonnet damage_fraction=0.460353
+[ORDER SINGLE SCORE] attacker=ursaluna move=headlongrush target_idx=1 target_name=brutebonnet single_score=0.460353
+[SCORE SINGLE] attacker=ursaluna move=headlongrush defender=chiyu damage_fraction=2.183680
+[ORDER SINGLE SCORE] attacker=ursaluna move=headlongrush target_idx=2 target_name=chiyu single_score=2.183680
+[SCORE SINGLE] attacker=ursaluna move=facade defender=brutebonnet damage_fraction=0.545412
+[ORDER SINGLE SCORE] attacker=ursaluna move=facade target_idx=1 target_name=brutebonnet single_score=0.545412
+[SCORE SINGLE] attacker=ursaluna move=facade defender=chiyu damage_fraction=0.645240
+[ORDER SINGLE SCORE] attacker=ursaluna move=facade target_idx=2 target_name=chiyu single_score=0.645240
+[SPREAD TEST START] attacker=ursaluna move=earthquake
+[SPREAD TARGET] slot=0 defender=brutebonnet damage_fraction=0.288971 contribution=+0.288971
+[SPREAD TARGET] slot=1 defender=chiyu damage_fraction=1.369800 contribution=+1.369800
+[SPREAD TEST TOTAL] attacker=ursaluna move=earthquake total=1.658771
+[ORDER SPREAD SCORE] attacker=ursaluna move=earthquake target_idx=0 target_name=spread_or_none spread_score=1.658771
+[ORDER SKIP TARGET] attacker=ursaluna move=protect target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=ursaluna max_single=2.183680 max_spread=1.658771 prefer_single=True prefer_spread=False tied=False
+[CANDIDATES] attacker=ursaluna count=1
+[CANDIDATE ORDER] attacker=ursaluna move=headlongrush target_idx=2 target_name=chiyu
+[CHOSEN FROM CANDIDATES] attacker=ursaluna move=headlongrush target_idx=2 target_name=chiyu
+[CHOOSE SLOT START] attacker=brutebonnet valid_orders=20
+[SCORE SINGLE] attacker=brutebonnet move=seedbomb defender=koraidon damage_fraction=0.302467
+[ORDER SINGLE SCORE] attacker=brutebonnet move=seedbomb target_idx=1 target_name=koraidon single_score=0.302467
+[SCORE SINGLE] attacker=brutebonnet move=seedbomb defender=ursaluna damage_fraction=0.650928
+[ORDER SINGLE SCORE] attacker=brutebonnet move=seedbomb target_idx=2 target_name=ursaluna single_score=0.650928
+[SCORE SINGLE] attacker=brutebonnet move=suckerpunch defender=koraidon damage_fraction=0.266533
+[ORDER SINGLE SCORE] attacker=brutebonnet move=suckerpunch target_idx=1 target_name=koraidon single_score=0.266533
+[SCORE SINGLE] attacker=brutebonnet move=suckerpunch defender=ursaluna damage_fraction=1.146624
+[ORDER SINGLE SCORE] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=ursaluna single_score=1.146624
+[ORDER SINGLE SCORE] attacker=brutebonnet move=spore target_idx=1 target_name=koraidon single_score=-1.000000
+[ORDER SINGLE SCORE] attacker=brutebonnet move=spore target_idx=2 target_name=ursaluna single_score=-1.000000
+[ORDER SKIP TARGET] attacker=brutebonnet move=ragepowder target_idx=0 target_name=spread_or_none
+[SCORE SINGLE] attacker=brutebonnet move=seedbomb defender=koraidon damage_fraction=0.302467
+[ORDER SINGLE SCORE] attacker=brutebonnet move=seedbomb target_idx=1 target_name=koraidon single_score=0.302467
+[SCORE SINGLE] attacker=brutebonnet move=seedbomb defender=ursaluna damage_fraction=0.650928
+[ORDER SINGLE SCORE] attacker=brutebonnet move=seedbomb target_idx=2 target_name=ursaluna single_score=0.650928
+[SCORE SINGLE] attacker=brutebonnet move=suckerpunch defender=koraidon damage_fraction=0.266533
+[ORDER SINGLE SCORE] attacker=brutebonnet move=suckerpunch target_idx=1 target_name=koraidon single_score=0.266533
+[SCORE SINGLE] attacker=brutebonnet move=suckerpunch defender=ursaluna damage_fraction=1.146624
+[ORDER SINGLE SCORE] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=ursaluna single_score=1.146624
+[ORDER SINGLE SCORE] attacker=brutebonnet move=spore target_idx=1 target_name=koraidon single_score=-1.000000
+[ORDER SINGLE SCORE] attacker=brutebonnet move=spore target_idx=2 target_name=ursaluna single_score=-1.000000
+[ORDER SKIP TARGET] attacker=brutebonnet move=ragepowder target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=brutebonnet max_single=1.146624 max_spread=-1.000000 prefer_single=True prefer_spread=False tied=False
+[CANDIDATES] attacker=brutebonnet count=2
+[CANDIDATE ORDER] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=ursaluna
+[CANDIDATE ORDER] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=ursaluna
+[CHOSEN FROM CANDIDATES] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=ursaluna
+[CHOOSE SLOT START] attacker=chiyu valid_orders=16
+[SCORE SINGLE] attacker=chiyu move=darkpulse defender=koraidon damage_fraction=0.426400
+[ORDER SINGLE SCORE] attacker=chiyu move=darkpulse target_idx=1 target_name=koraidon single_score=0.426400
+[SCORE SINGLE] attacker=chiyu move=darkpulse defender=ursaluna damage_fraction=2.034720
+[ORDER SINGLE SCORE] attacker=chiyu move=darkpulse target_idx=2 target_name=ursaluna single_score=2.034720
+[SPREAD TEST START] attacker=chiyu move=heatwave
+[SPREAD TARGET] slot=0 defender=koraidon damage_fraction=0.377653 contribution=+0.377653
+[SPREAD TARGET] slot=1 defender=ursaluna damage_fraction=0.901867 contribution=+0.901867
+[SPREAD TEST TOTAL] attacker=chiyu move=heatwave total=1.279521
+[ORDER SPREAD SCORE] attacker=chiyu move=heatwave target_idx=0 target_name=spread_or_none spread_score=1.279521
+[SCORE SINGLE] attacker=chiyu move=overheat defender=koraidon damage_fraction=0.683525
+[ORDER SINGLE SCORE] attacker=chiyu move=overheat target_idx=1 target_name=koraidon single_score=0.683525
+[SCORE SINGLE] attacker=chiyu move=overheat defender=ursaluna damage_fraction=1.634460
+[ORDER SINGLE SCORE] attacker=chiyu move=overheat target_idx=2 target_name=ursaluna single_score=1.634460
+[SPREAD TEST START] attacker=chiyu move=snarl
+[SPREAD TARGET] slot=0 defender=koraidon damage_fraction=0.223378 contribution=+0.223378
+[SPREAD TARGET] slot=1 defender=ursaluna damage_fraction=1.063215 contribution=+1.063215
+[SPREAD TEST TOTAL] attacker=chiyu move=snarl total=1.286593
+[ORDER SPREAD SCORE] attacker=chiyu move=snarl target_idx=0 target_name=spread_or_none spread_score=1.286593
+[SCORE SINGLE] attacker=chiyu move=darkpulse defender=koraidon damage_fraction=0.426400
+[ORDER SINGLE SCORE] attacker=chiyu move=darkpulse target_idx=1 target_name=koraidon single_score=0.426400
+[SCORE SINGLE] attacker=chiyu move=darkpulse defender=ursaluna damage_fraction=2.034720
+[ORDER SINGLE SCORE] attacker=chiyu move=darkpulse target_idx=2 target_name=ursaluna single_score=2.034720
+[SPREAD TEST START] attacker=chiyu move=heatwave
+[SPREAD TARGET] slot=0 defender=koraidon damage_fraction=0.377653 contribution=+0.377653
+[SPREAD TARGET] slot=1 defender=ursaluna damage_fraction=0.901867 contribution=+0.901867
+[SPREAD TEST TOTAL] attacker=chiyu move=heatwave total=1.279521
+[ORDER SPREAD SCORE] attacker=chiyu move=heatwave target_idx=0 target_name=spread_or_none spread_score=1.279521
+[SCORE SINGLE] attacker=chiyu move=overheat defender=koraidon damage_fraction=0.683525
+[ORDER SINGLE SCORE] attacker=chiyu move=overheat target_idx=1 target_name=koraidon single_score=0.683525
+[SCORE SINGLE] attacker=chiyu move=overheat defender=ursaluna damage_fraction=1.634460
+[ORDER SINGLE SCORE] attacker=chiyu move=overheat target_idx=2 target_name=ursaluna single_score=1.634460
+[SPREAD TEST START] attacker=chiyu move=snarl
+[SPREAD TARGET] slot=0 defender=koraidon damage_fraction=0.223378 contribution=+0.223378
+[SPREAD TARGET] slot=1 defender=ursaluna damage_fraction=1.063215 contribution=+1.063215
+[SPREAD TEST TOTAL] attacker=chiyu move=snarl total=1.286593
+[ORDER SPREAD SCORE] attacker=chiyu move=snarl target_idx=0 target_name=spread_or_none spread_score=1.286593
+[CANDIDATE TEST] attacker=chiyu max_single=2.034720 max_spread=1.286593 prefer_single=True prefer_spread=False tied=False
+[CANDIDATES] attacker=chiyu count=2
+[CANDIDATE ORDER] attacker=chiyu move=darkpulse target_idx=2 target_name=ursaluna
+[CANDIDATE ORDER] attacker=chiyu move=darkpulse target_idx=2 target_name=ursaluna
+[CHOSEN FROM CANDIDATES] attacker=chiyu move=darkpulse target_idx=2 target_name=ursaluna
+[CHOOSE SLOT START] attacker=koraidon valid_orders=10
+[SCORE SINGLE] attacker=koraidon move=closecombat defender=brutebonnet damage_fraction=1.647943
+[ORDER SINGLE SCORE] attacker=koraidon move=closecombat target_idx=1 target_name=brutebonnet single_score=1.647943
+[ORDER SINGLE SCORE] attacker=koraidon move=closecombat target_idx=2 target_name=opp_slot_1_none single_score=-1.000000
+[SCORE SINGLE] attacker=koraidon move=flareblitz defender=brutebonnet damage_fraction=0.549314
+[ORDER SINGLE SCORE] attacker=koraidon move=flareblitz target_idx=1 target_name=brutebonnet single_score=0.549314
+[ORDER SINGLE SCORE] attacker=koraidon move=flareblitz target_idx=2 target_name=opp_slot_1_none single_score=-1.000000
+[SCORE SINGLE] attacker=koraidon move=flamecharge defender=brutebonnet damage_fraction=0.234714
+[ORDER SINGLE SCORE] attacker=koraidon move=flamecharge target_idx=1 target_name=brutebonnet single_score=0.234714
+[ORDER SINGLE SCORE] attacker=koraidon move=flamecharge target_idx=2 target_name=opp_slot_1_none single_score=-1.000000
+[ORDER SKIP TARGET] attacker=koraidon move=protect target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=koraidon max_single=1.647943 max_spread=-1.000000 prefer_single=True prefer_spread=False tied=False
+[CANDIDATES] attacker=koraidon count=1
+[CANDIDATE ORDER] attacker=koraidon move=closecombat target_idx=1 target_name=brutebonnet
+[CHOSEN FROM CANDIDATES] attacker=koraidon move=closecombat target_idx=1 target_name=brutebonnet
+[CHOOSE SLOT START] attacker=lunala valid_orders=8
+[SCORE SINGLE] attacker=lunala move=moongeistbeam defender=brutebonnet damage_fraction=0.917395
+[ORDER SINGLE SCORE] attacker=lunala move=moongeistbeam target_idx=1 target_name=brutebonnet single_score=0.917395
+[ORDER SINGLE SCORE] attacker=lunala move=moongeistbeam target_idx=2 target_name=opp_slot_1_none single_score=-1.000000
+[SCORE SINGLE] attacker=lunala move=meteorbeam defender=brutebonnet damage_fraction=0.729916
+[ORDER SINGLE SCORE] attacker=lunala move=meteorbeam target_idx=1 target_name=brutebonnet single_score=0.729916
+[ORDER SINGLE SCORE] attacker=lunala move=meteorbeam target_idx=2 target_name=opp_slot_1_none single_score=-1.000000
+[ORDER SKIP TARGET] attacker=lunala move=wideguard target_idx=0 target_name=spread_or_none
+[ORDER SKIP TARGET] attacker=lunala move=trickroom target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=lunala max_single=0.917395 max_spread=-1.000000 prefer_single=True prefer_spread=False tied=False
+[CANDIDATES] attacker=lunala count=1
+[CANDIDATE ORDER] attacker=lunala move=moongeistbeam target_idx=1 target_name=brutebonnet
+[CHOSEN FROM CANDIDATES] attacker=lunala move=moongeistbeam target_idx=1 target_name=brutebonnet
+[POST CMD HP] opponent=koraidon prev=1.0000 now=0.6400 delta=+36.00%
+[POST CMD HP] ---
+[CHOOSE SLOT START] attacker=brutebonnet valid_orders=10
+[SCORE SINGLE] attacker=brutebonnet move=seedbomb defender=koraidon damage_fraction=0.297452
+[ORDER SINGLE SCORE] attacker=brutebonnet move=seedbomb target_idx=1 target_name=koraidon single_score=0.297452
+[SCORE SINGLE] attacker=brutebonnet move=seedbomb defender=lunala damage_fraction=0.494716
+[ORDER SINGLE SCORE] attacker=brutebonnet move=seedbomb target_idx=2 target_name=lunala single_score=0.494716
+[SCORE SINGLE] attacker=brutebonnet move=suckerpunch defender=koraidon damage_fraction=0.261521
+[ORDER SINGLE SCORE] attacker=brutebonnet move=suckerpunch target_idx=1 target_name=koraidon single_score=0.261521
+[SCORE SINGLE] attacker=brutebonnet move=suckerpunch defender=lunala damage_fraction=1.741505
+[ORDER SINGLE SCORE] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=lunala single_score=1.741505
+[ORDER SINGLE SCORE] attacker=brutebonnet move=spore target_idx=1 target_name=koraidon single_score=-1.000000
+[ORDER SINGLE SCORE] attacker=brutebonnet move=spore target_idx=2 target_name=lunala single_score=-1.000000
+[ORDER SKIP TARGET] attacker=brutebonnet move=ragepowder target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=brutebonnet max_single=1.741505 max_spread=-1.000000 prefer_single=True prefer_spread=False tied=False
+[CANDIDATES] attacker=brutebonnet count=1
+[CANDIDATE ORDER] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=lunala
+[CHOSEN FROM CANDIDATES] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=lunala
+[POST CMD HP] opponent=brutebonnet prev=1.0000 now=0.2000 delta=+80.00%
+[POST CMD HP] ---
+[CHOOSE SLOT START] attacker=koraidon valid_orders=10
+[SCORE SINGLE] attacker=koraidon move=closecombat defender=brutebonnet damage_fraction=1.647943
+[ORDER SINGLE SCORE] attacker=koraidon move=closecombat target_idx=1 target_name=brutebonnet single_score=1.647943
+[ORDER SINGLE SCORE] attacker=koraidon move=closecombat target_idx=2 target_name=opp_slot_1_none single_score=-1.000000
+[SCORE SINGLE] attacker=koraidon move=flareblitz defender=brutebonnet damage_fraction=0.549314
+[ORDER SINGLE SCORE] attacker=koraidon move=flareblitz target_idx=1 target_name=brutebonnet single_score=0.549314
+[ORDER SINGLE SCORE] attacker=koraidon move=flareblitz target_idx=2 target_name=opp_slot_1_none single_score=-1.000000
+[SCORE SINGLE] attacker=koraidon move=flamecharge defender=brutebonnet damage_fraction=0.234714
+[ORDER SINGLE SCORE] attacker=koraidon move=flamecharge target_idx=1 target_name=brutebonnet single_score=0.234714
+[ORDER SINGLE SCORE] attacker=koraidon move=flamecharge target_idx=2 target_name=opp_slot_1_none single_score=-1.000000
+[ORDER SKIP TARGET] attacker=koraidon move=protect target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=koraidon max_single=1.647943 max_spread=-1.000000 prefer_single=True prefer_spread=False tied=False
+[CANDIDATES] attacker=koraidon count=1
+[CANDIDATE ORDER] attacker=koraidon move=closecombat target_idx=1 target_name=brutebonnet
+[CHOSEN FROM CANDIDATES] attacker=koraidon move=closecombat target_idx=1 target_name=brutebonnet
+[CHOOSE SLOT START] attacker=lunala valid_orders=8
+[SCORE SINGLE] attacker=lunala move=moongeistbeam defender=brutebonnet damage_fraction=0.917395
+[ORDER SINGLE SCORE] attacker=lunala move=moongeistbeam target_idx=1 target_name=brutebonnet single_score=0.917395
+[ORDER SINGLE SCORE] attacker=lunala move=moongeistbeam target_idx=2 target_name=opp_slot_1_none single_score=-1.000000
+[SCORE SINGLE] attacker=lunala move=meteorbeam defender=brutebonnet damage_fraction=0.729916
+[ORDER SINGLE SCORE] attacker=lunala move=meteorbeam target_idx=1 target_name=brutebonnet single_score=0.729916
+[ORDER SINGLE SCORE] attacker=lunala move=meteorbeam target_idx=2 target_name=opp_slot_1_none single_score=-1.000000
+[ORDER SKIP TARGET] attacker=lunala move=wideguard target_idx=0 target_name=spread_or_none
+[ORDER SKIP TARGET] attacker=lunala move=trickroom target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=lunala max_single=0.917395 max_spread=-1.000000 prefer_single=True prefer_spread=False tied=False
+[CANDIDATES] attacker=lunala count=1
+[CANDIDATE ORDER] attacker=lunala move=moongeistbeam target_idx=1 target_name=brutebonnet
+[CHOSEN FROM CANDIDATES] attacker=lunala move=moongeistbeam target_idx=1 target_name=brutebonnet
+[POST CMD HP] opponent=koraidon prev=0.6400 now=0.2400 delta=+40.00%
+[POST CMD HP] ---
+[CHOOSE SLOT START] attacker=brutebonnet valid_orders=10
+[SCORE SINGLE] attacker=brutebonnet move=seedbomb defender=koraidon damage_fraction=0.393289
+[ORDER SINGLE SCORE] attacker=brutebonnet move=seedbomb target_idx=1 target_name=koraidon single_score=0.393289
+[SCORE SINGLE] attacker=brutebonnet move=seedbomb defender=lunala damage_fraction=0.494716
+[ORDER SINGLE SCORE] attacker=brutebonnet move=seedbomb target_idx=2 target_name=lunala single_score=0.494716
+[SCORE SINGLE] attacker=brutebonnet move=suckerpunch defender=koraidon damage_fraction=0.345378
+[ORDER SINGLE SCORE] attacker=brutebonnet move=suckerpunch target_idx=1 target_name=koraidon single_score=0.345378
+[SCORE SINGLE] attacker=brutebonnet move=suckerpunch defender=lunala damage_fraction=1.741505
+[ORDER SINGLE SCORE] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=lunala single_score=1.741505
+[ORDER SINGLE SCORE] attacker=brutebonnet move=spore target_idx=1 target_name=koraidon single_score=-1.000000
+[ORDER SINGLE SCORE] attacker=brutebonnet move=spore target_idx=2 target_name=lunala single_score=-1.000000
+[ORDER SKIP TARGET] attacker=brutebonnet move=ragepowder target_idx=0 target_name=spread_or_none
+[CANDIDATE TEST] attacker=brutebonnet max_single=1.741505 max_spread=-1.000000 prefer_single=True prefer_spread=False tied=False
+[CANDIDATES] attacker=brutebonnet count=1
+[CANDIDATE ORDER] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=lunala
+[CHOSEN FROM CANDIDATES] attacker=brutebonnet move=suckerpunch target_idx=2 target_name=lunala
+Battle 1/1 done, winner=ToddlerBot
+Done!
