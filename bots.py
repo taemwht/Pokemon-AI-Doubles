@@ -118,16 +118,20 @@ def get_board_snapshot(battle: AbstractBattle) -> dict:
         moves = getattr(p, "moves", {}) or {}
         for m in moves.values():
             try:
+                move_type = getattr(m, "type", None)
+                type_str = None
+                if move_type is not None:
+                    type_str = (
+                        move_type.name.lower()
+                        if hasattr(move_type, "name")
+                        else str(move_type).lower()
+                    )
                 moves_list.append(
                     {
                         "id": getattr(m, "id", None),
                         "name": getattr(m, "name", None),
                         "base_power": getattr(m, "base_power", None),
-                        "type": (
-                            getattr(m, "type", None).name.lower()
-                            if getattr(m, "type", None) is not None and hasattr(getattr(m, "type", None), "name")
-                            else (str(getattr(m, "type", None)).lower() if getattr(m, "type", None) is not None else None)
-                        ),
+                        "type": type_str,
                         "category": getattr(m, "category", None),
                         "target": getattr(m, "target", None),
                     }
@@ -432,6 +436,20 @@ class BaseDoubleBot(Player):
         """Base implementation — utility moves ignored. Subclasses override."""
         return -1.0
 
+    def _score_spore_for_targeted_foe(
+        self,
+        move: Move,
+        attacker,
+        battle: AbstractBattle,
+        defender,
+        foe_slot: int,
+    ) -> float:
+        """
+        Spore targets a specific foe slot (0 or 1); score that order using the intended target.
+        Base: never rank Spore (subclasses may override).
+        """
+        return -1.0
+
     def _order_target_index(self, order: SingleBattleOrder) -> int | None:
         """Best-effort target parse: foes are 1/2, allies are -1/-2."""
         import re
@@ -496,6 +514,10 @@ class BaseDoubleBot(Player):
         """
         if attacker is None or attacker.fainted:
             return None
+
+        # One cache per slot scoring pass: same Spore + Showdown target is evaluated twice
+        # (duplicate valid_orders); reuse score and avoid duplicate subclass side effects/logging.
+        self._spore_score_round_cache: dict[int, float] = {}
 
         def opp_defender(opp_slot: int):
             if opp_slot == 0:
@@ -582,7 +604,22 @@ class BaseDoubleBot(Player):
 
             # Utility moves (base_power == 0, not spread) — score before target filter
             if move.base_power == 0:
-                s = single_cell_score(move, None)
+                move_ui = str(getattr(move, "id", "") or "").lower().replace("-", "").replace(" ", "")
+                if move_ui == "spore":
+                    tidx = self._order_target_index(o)
+                    if tidx not in (1, 2):
+                        continue
+                    foe_slot = tidx - 1
+                    if foe_slot not in self._spore_score_round_cache:
+                        defender = opp_defender(foe_slot)
+                        self._spore_score_round_cache[foe_slot] = (
+                            self._score_spore_for_targeted_foe(
+                                move, attacker, battle, defender, foe_slot
+                            )
+                        )
+                    s = self._spore_score_round_cache[foe_slot]
+                else:
+                    s = single_cell_score(move, None)
                 if s < 0:
                     continue
                 if s > utility_scores[mi] + eps:
@@ -657,7 +694,8 @@ class BaseDoubleBot(Player):
                     continue
                 candidates.extend(grid_orders[mi][oj])
 
-        if max_utility >= max_any - eps:
+        # Never prefer status/support when nothing scores above zero (ties at 0 are noise).
+        if max_utility > eps and max_utility >= max_any - eps:
             for mi in range(4):
                 if utility_scores[mi] < 0:
                     continue

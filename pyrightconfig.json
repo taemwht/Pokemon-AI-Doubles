@@ -1,0 +1,5 @@
+{
+  "exclude": ["venv", "pokemon-showdown"],
+  "venvPath": ".",
+  "venv": "venv"
+}

@@ -12,9 +12,17 @@ import random
 import string
 from pathlib import Path
 
-from poke_env import AccountConfiguration, LocalhostServerConfiguration
+from poke_env import AccountConfiguration, LocalhostServerConfiguration, Player
 from poke_env.battle.abstract_battle import AbstractBattle
-from poke_env.player.battle_order import BattleOrder
+from poke_env.battle.move import Move
+from poke_env.battle.pokemon import Pokemon
+from poke_env.battle.status import Status
+from poke_env.player.battle_order import (
+    BattleOrder,
+    DoubleBattleOrder,
+    PassBattleOrder,
+    SingleBattleOrder,
+)
 from poke_env.teambuilder import ConstantTeambuilder
 
 from bots import REGULATION_I_TEAM, BaseDoubleBot, ToddlerBot
@@ -25,69 +33,119 @@ __all__ = ["AdolenceBot", "main"]
 class AdolenceBot(BaseDoubleBot):
     """Base doubles tactics + position evaluation (for future search / upgrades)."""
 
+    @staticmethod
+    def _format_chosen_slot(order: SingleBattleOrder) -> str:
+        inner = getattr(order, "order", None)
+        if isinstance(order, PassBattleOrder):
+            return "pass"
+        if isinstance(inner, Move):
+            mid = str(getattr(inner, "id", "?"))
+            t = int(getattr(order, "move_target", 0) or 0)
+            return f"{mid} {t}".strip() if t else mid
+        if isinstance(inner, Pokemon):
+            sp = str(getattr(inner, "species", "") or inner)
+            return f"switch {sp}"
+        if isinstance(inner, str):
+            return inner
+        return repr(inner)
+
+    def _log_adolence_chosen_turn(self, battle: AbstractBattle, order: BattleOrder) -> None:
+        tag = getattr(battle, "battle_tag", "?")
+        lead = [str(getattr(m, "species", "?")) for m in (battle.active_pokemon or []) if m is not None]
+        if isinstance(order, DoubleBattleOrder):
+            a = self._format_chosen_slot(order.first_order)
+            b = self._format_chosen_slot(order.second_order)
+            print(f"[ADOLENCE CHOICE] {tag} active={lead} | {a} || {b}")
+        else:
+            msg = getattr(order, "message", None)
+            line = msg if isinstance(msg, str) else str(order)
+            print(f"[ADOLENCE CHOICE] {tag} active={lead} | {line}")
+
+    def _log_adolence_switches_if_any(self, battle: AbstractBattle, order: BattleOrder) -> None:
+        """One line per slot that is a switch, aligned with [ADOLENCE CHOICE] / [UTILITY] style."""
+        if not isinstance(order, DoubleBattleOrder):
+            return
+        tag = getattr(battle, "battle_tag", "?")
+        our = battle.active_pokemon or []
+        for slot_idx, so in enumerate((order.first_order, order.second_order)):
+            inner = getattr(so, "order", None)
+            if not isinstance(inner, Pokemon):
+                continue
+            out_mon = our[slot_idx] if slot_idx < len(our) else None
+            out_sp = str(getattr(out_mon, "species", "?") or "?").lower()
+            in_sp = str(getattr(inner, "species", "?") or "?").lower()
+            print(f"[ADOLENCE SWITCH] {tag} slot={slot_idx} out={out_sp} in={in_sp}")
+
+    def _adolence_spore_memory_reset_if_new_battle(self, battle: AbstractBattle) -> None:
+        tag = battle.battle_tag
+        if getattr(self, "_adolence_spore_tag", None) != tag:
+            self._adolence_spore_tag = tag
+            self._adolence_spored_keys: set[tuple[int, str]] = set()
+            self._adolence_prev_active_ids = None
+
+    def _adolence_note_spore_after_choice(self, battle: AbstractBattle, order: BattleOrder) -> None:
+        """Remember (foe slot, species) we attacked with Spore — do not re-rank Spore vs that pair."""
+        if not isinstance(order, DoubleBattleOrder):
+            return
+        for so in (order.first_order, order.second_order):
+            mov = getattr(so, "order", None)
+            if not isinstance(mov, Move):
+                continue
+            if str(getattr(mov, "id", "")).lower() != "spore":
+                continue
+            tidx = self._order_target_index(so)
+            if tidx not in (1, 2):
+                continue
+            foe_slot = tidx - 1
+            opp_act = battle.opponent_active_pokemon or []
+            if foe_slot >= len(opp_act):
+                continue
+            tgt = opp_act[foe_slot]
+            if tgt is None:
+                continue
+            spec_key = (
+                str(getattr(tgt, "species", "")).lower().replace(" ", "").replace("-", "")
+            )
+            self._adolence_spored_keys.add((foe_slot, spec_key))
+
     def choose_move(self, battle: AbstractBattle) -> BattleOrder:
         self._log_opponent_hp_delta(battle)
+        self._adolence_spore_memory_reset_if_new_battle(battle)
 
         # Temporary sanity check — remove after Step 1 is confirmed working
         score = self.evaluate_position(battle)
         print(f"[EVAL] position_score={score:.4f}")
 
-        if not hasattr(self, "_debug_done"):
-            self._debug_battle_sides(battle)
-            self._debug_done = True
+        # Switch-in cooldown: mons whose object id first appeared among actives since last choice.
+        prev = getattr(self, "_adolence_prev_active_ids", None)
+        cur_ids = {id(m) for m in (battle.active_pokemon or []) if m is not None}
+        if prev is not None:
+            self._recently_switched_in = cur_ids - prev
+        else:
+            self._recently_switched_in = set()
+        self._adolence_prev_active_ids = cur_ids
 
         order = self._choose_doubles_move(battle)
+        self._adolence_note_spore_after_choice(battle, order)
+        self._log_adolence_switches_if_any(battle, order)
+        self._log_adolence_chosen_turn(battle, order)
         self._last_opp_active_hp = self._opponent_active_hp_snapshot(battle)
         return order
 
-    def _debug_battle_sides(self, battle: AbstractBattle) -> None:
-        print(f"[SIDES] type={type(battle).__name__}")
-        print(f"[SIDES] active_pokemon={[getattr(m, 'species', '?') for m in (battle.active_pokemon or [])]}")
-        print(f"[SIDES] opponent_active_pokemon={[getattr(m, 'species', '?') for m in (battle.opponent_active_pokemon or [])]}")
-        print(f"[SIDES] team keys={[getattr(m, 'species', '?') for m in battle.team.values()]}")
-        print(f"[SIDES] opponent_team keys={[getattr(m, 'species', '?') for m in (battle.opponent_team or {}).values()]}")
-
     def _get_opponent_active(self, battle: AbstractBattle) -> list:
         """
-        Safely get opponent active mons by excluding our own team species
-        from whatever poke-env returns as opponent_active_pokemon.
-        Since both bots use the same team, we need slot-based disambiguation.
-        Use the raw battle._opponent_active_pokemon if available.
+        Get opponent active mons from opponent_team.
+        opponent_team tracks the opponent's mons as a separate object from ours.
         """
-        # Our species set
-        our_species = {
-            str(getattr(m, "species", "") or "").lower()
-            for m in (battle.active_pokemon or [])
-            if m is not None
-        }
-
-        def _is_live_mon(m) -> bool:
-            return m is not None and hasattr(m, "current_hp_fraction")
-
-        # Try the internal attribute first (may mix non-Pokemon placeholders; skip those)
-        raw = getattr(battle, "_opponent_active_pokemon", None)
-        if raw is not None:
-            result = []
-            for m in raw:
-                if not _is_live_mon(m):
-                    continue
-                if getattr(m, "fainted", False):
-                    continue
-                result.append(m)
-            if result:
-                return result
-
-        # Fallback — filter opponent_active_pokemon by excluding our active mons
         result = []
-        our_active_ids = {id(m) for m in (battle.active_pokemon or []) if _is_live_mon(m)}
-        for m in (battle.opponent_active_pokemon or []):
-            if not _is_live_mon(m):
+        for mon in (battle.opponent_team.values() or []):
+            if mon is None:
                 continue
-            if id(m) in our_active_ids:
+            if getattr(mon, "fainted", False):
                 continue
-            if getattr(m, "fainted", False):
+            if not getattr(mon, "active", False):
                 continue
-            result.append(m)
+            result.append(mon)
         return result
 
     def evaluate_position(self, battle: AbstractBattle) -> float:
@@ -123,27 +181,27 @@ class AdolenceBot(BaseDoubleBot):
         )
         score += (our_alive - opp_alive) * 1.0
 
-        # --- Status advantage ---
-        bad_statuses = {"slp", "frz"}
-        ok_statuses = {"brn", "psn", "tox", "par"}
+        # --- Status advantage (use Status enum; str(status) is not a stable API) ---
+        def _status_eval_adj(st) -> float:
+            if st == Status.SLP or st == Status.FRZ:
+                return 0.6
+            if st in (Status.BRN, Status.PSN, Status.TOX, Status.PAR):
+                return 0.2
+            return 0.0
 
         for mon in self._get_opponent_active(battle):
             if mon is None:
                 continue
-            s = str(getattr(mon, "status", "") or "").lower()
-            if any(b in s for b in bad_statuses):
-                score += 0.6
-            elif any(b in s for b in ok_statuses):
-                score += 0.2
+            adj = _status_eval_adj(getattr(mon, "status", None))
+            if adj:
+                score += adj
 
         for mon in (battle.active_pokemon or []):
             if mon is None:
                 continue
-            s = str(getattr(mon, "status", "") or "").lower()
-            if any(b in s for b in bad_statuses):
-                score -= 0.6
-            elif any(b in s for b in ok_statuses):
-                score -= 0.2
+            adj = _status_eval_adj(getattr(mon, "status", None))
+            if adj:
+                score -= adj
 
         # --- Field conditions ---
         try:
@@ -219,13 +277,6 @@ class AdolenceBot(BaseDoubleBot):
         move_id = str(getattr(move, "id", "") or "").lower().replace("-", "").replace(" ", "")
         attacker_name = str(getattr(attacker, "species", None) or "?").lower()
 
-        if move_id == "trickroom":
-            for mon in (battle.active_pokemon or []):
-                if mon is None:
-                    continue
-                base_spe = (getattr(mon, "base_stats", {}) or {}).get("spe", 999)
-                print(f"[TR ACTIVE DEBUG] species={getattr(mon, 'species', '?')} base_spe={base_spe}")
-
         if move_id == "protect":
             facing_ko = self._facing_likely_ko(attacker, battle)
             attacker_hp = getattr(attacker, "current_hp_fraction", 1.0)
@@ -242,35 +293,6 @@ class AdolenceBot(BaseDoubleBot):
                 print(f"[UTILITY] protect={attacker_name} reason=stall hp={attacker_hp:.2f} score=3.0")
                 return 3.0
             print(f"[UTILITY] protect={attacker_name} reason=none hp={attacker_hp:.2f} score=-1.0")
-            return -1.0
-
-        if move_id == "spore":
-            # Get our own species names to filter them out
-            our_species = {
-                str(getattr(m, "species", "") or "").lower()
-                for m in battle.team.values()
-                if m is not None
-            }
-
-            for opp in self._get_opponent_active(battle):
-                if opp is None or getattr(opp, "fainted", False):
-                    continue
-                opp_species = str(getattr(opp, "species", "") or "").lower()
-                # Skip if this is actually one of our own mons
-                if opp_species in our_species:
-                    print(f"[SPORE DEBUG] skipping own mon species={opp_species}")
-                    continue
-                item = str(getattr(opp, "item", "") or "").lower().replace(" ", "")
-                if item in ("lumberry", "safetygoggles"):
-                    print(f"[UTILITY] spore blocked by item={item} on {opp_species}")
-                    continue
-                status = str(getattr(opp, "status", "") or "").lower()
-                if "slp" in status:
-                    print(f"[UTILITY] spore blocked already_asleep {opp_species}")
-                    continue
-                print(f"[UTILITY] spore={attacker_name} target={opp_species} score=7.0")
-                return 7.0
-            print(f"[UTILITY] spore={attacker_name} no_valid_target score=-1.0")
             return -1.0
 
         if move_id in ("ragepowder", "followme"):
@@ -329,6 +351,46 @@ class AdolenceBot(BaseDoubleBot):
         print(f"[UTILITY] unknown={move_id} attacker={attacker_name} score=-1.0")
         return -1.0
 
+    def _score_spore_for_targeted_foe(
+        self, move, attacker, battle: AbstractBattle, defender, foe_slot: int
+    ) -> float:
+        """
+        Spore is scored per Showdown foe slot so each target gets a stable score.
+
+        Sleep is detected with ``Status.SLP`` (not string hacks on the enum's ``__str__``).
+        We also track (foe_slot, species) pairs we already committed Spore against this battle
+        so we do not keep re-prioritizing Spore when ``status`` is laggy or inconsistent.
+        """
+        if defender is None or getattr(defender, "fainted", False):
+            return -1.0
+        attacker_name = str(getattr(attacker, "species", None) or "?").lower()
+        # Never Spore our own active Pokémon (self or ally), even if targeting metadata glitches.
+        for m in battle.active_pokemon or []:
+            if m is None:
+                continue
+            if m is defender or id(m) == id(defender):
+                print(f"[UTILITY] spore blocked own_side target={getattr(defender, 'species', '?')}")
+                return -1.0
+        opp_species = str(getattr(defender, "species", "") or "").lower()
+        spec_key = opp_species.replace(" ", "").replace("-", "")
+        if (foe_slot, spec_key) in getattr(self, "_adolence_spored_keys", set()):
+            print(f"[UTILITY] spore blocked prior_attempt slot={foe_slot} species={opp_species}")
+            return -1.0
+        item = str(getattr(defender, "item", "") or "").lower().replace(" ", "")
+        if item in ("lumberry", "safetygoggles"):
+            print(f"[UTILITY] spore blocked by item={item} on {opp_species}")
+            return -1.0
+        st = getattr(defender, "status", None)
+        if st == Status.SLP:
+            print(f"[UTILITY] spore blocked already_asleep {opp_species}")
+            return -1.0
+        opp_types = [str(t).lower() for t in (getattr(defender, "types", []) or []) if t]
+        if "grass" in opp_types:
+            print(f"[UTILITY] spore blocked grass_immune {getattr(defender, 'species', '?')}")
+            return -1.0
+        print(f"[UTILITY] spore={attacker_name} target={opp_species} score=7.0")
+        return 7.0
+
     def _facing_likely_ko(self, attacker, battle: AbstractBattle) -> bool:
         attacker_hp = getattr(attacker, "current_hp_fraction", 1.0)
         for opp in self._get_opponent_active(battle):
@@ -377,6 +439,283 @@ class AdolenceBot(BaseDoubleBot):
                     return True
         return False
 
+    def _score_switch_in(self, candidate, battle: AbstractBattle) -> float:
+        """
+        Score a bench mon as a potential switch-in.
+        Higher = better candidate to bring in right now.
+        Returns negative if switching is not worth it.
+        """
+        if candidate is None or getattr(candidate, "fainted", False):
+            return -999.0
+
+        species = str(getattr(candidate, "species", "") or "").lower()
+        hp = getattr(candidate, "current_hp_fraction", 1.0)
+
+        score = 0.0
+
+        # Penalise switching in a low-HP mon
+        if hp < 0.3:
+            return -999.0
+        score += (hp - 0.5) * 2.0  # bonus for healthy mons, penalty below 50%
+
+        opp_active = self._get_opponent_active(battle)
+
+        # Type matchup: reward resisting or being immune to opponent moves,
+        # penalise being weak to them
+        for opp in opp_active:
+            if opp is None:
+                continue
+            for move in (getattr(opp, "moves", {}) or {}).values():
+                if getattr(move, "base_power", 0) == 0:
+                    continue
+                if self._is_immune(move, candidate):
+                    score += 1.5
+                    continue
+                try:
+                    eff = candidate.damage_multiplier(move)
+                    if eff >= 2.0:
+                        score -= 2.0
+                    elif eff >= 1.5:
+                        score -= 1.0
+                    elif eff <= 0.5:
+                        score += 1.0
+                    elif eff == 0.0:
+                        score += 1.5
+                except Exception:
+                    pass
+
+        # Role bonuses: reward bringing in the right mon for the situation
+        fields = getattr(battle, "fields", {}) or {}
+        tr_active = any("trick" in str(k).lower() for k in fields.keys())
+
+        # Lunala: reward if TR not up and we want to set it
+        if "lunala" in species:
+            if not tr_active and self._our_team_wants_trick_room(battle):
+                score += 3.0
+
+        # Brute Bonnet: reward if there's a valid Spore target
+        if "brutebonnet" in species:
+            for opp in opp_active:
+                if opp is None or getattr(opp, "fainted", False):
+                    continue
+                st = getattr(opp, "status", None)
+                if st == Status.SLP:
+                    continue
+                opp_types = [str(t).lower() for t in (getattr(opp, "types", []) or []) if t]
+                if "grass" in opp_types:
+                    continue
+                item = str(getattr(opp, "item", "") or "").lower().replace(" ", "")
+                if item in ("lumberry", "safetygoggles"):
+                    continue
+                score += 2.5  # valid spore target exists
+                break
+
+        # Ursaluna: reward under TR (benefits most from TR)
+        if "ursaluna" in species:
+            if tr_active:
+                score += 2.0
+
+        # Koraidon: reward in sun (Orichalcum Pulse)
+        if "koraidon" in species:
+            weather = getattr(battle, "weather", {}) or {}
+            if any("sun" in str(w).lower() or "harsh" in str(w).lower() for w in weather):
+                score += 1.5
+
+        return score
+
+    def _consider_voluntary_switch(
+        self,
+        attacker,
+        slot_idx: int,
+        valid_orders,
+        battle: AbstractBattle,
+    ) -> SingleBattleOrder | None:
+        """
+        Evaluate whether voluntarily switching `attacker` out is better than
+        any move it can make. Returns a switch SingleBattleOrder if switching
+        wins, otherwise None.
+
+        Only switches if the best bench candidate scores meaningfully higher
+        than staying in — uses a threshold to avoid pointless pivoting.
+        """
+        SWITCH_THRESHOLD = 7.0  # bench candidate must beat stay-in score by this much
+
+        if attacker is None or getattr(attacker, "fainted", False):
+            return None
+
+        recently_switched = getattr(self, "_recently_switched_in", set())
+        attacker_id = id(attacker)
+        if attacker_id in recently_switched:
+            return None
+
+        # Get the best move score for staying in
+        best_move_score = 0.0
+        opp_active = battle.opponent_active_pokemon or []
+
+        for o in valid_orders:
+            move = getattr(o, "order", None)
+            if not isinstance(move, Move):
+                continue
+            if getattr(move, "base_power", 0) == 0:
+                continue
+            if self._is_single_target_ally_attack(o):
+                continue
+            target_s = str(getattr(move, "target", "")).lower().replace("_", "")
+            is_spread = "alladjacent" in target_s
+            if is_spread:
+                total = 0.0
+                for opp in opp_active:
+                    if opp is None or getattr(opp, "fainted", False):
+                        continue
+                    if self._is_immune(move, opp):
+                        continue
+                    d = self._estimate_damage(move, attacker, opp, battle)
+                    if d >= 0:
+                        total += self._score_move(d, getattr(opp, "current_hp_fraction", 1.0))
+                best_move_score = max(best_move_score, total)
+            else:
+                tidx = self._order_target_index(o)
+                if tidx not in (1, 2):
+                    continue
+                opp_slot = tidx - 1
+                opp = opp_active[opp_slot] if opp_slot < len(opp_active) else None
+                if opp is None or getattr(opp, "fainted", False):
+                    continue
+                if self._is_immune(move, opp):
+                    continue
+                d = self._estimate_damage(move, attacker, opp, battle)
+                if d >= 0:
+                    s = self._score_move(d, getattr(opp, "current_hp_fraction", 1.0))
+                    best_move_score = max(best_move_score, s)
+
+        # Don't pivot away from a good attacking position
+        if best_move_score > 5.0:
+            return None
+
+        # Find the best switch-in candidate among valid switch orders for this slot
+        best_switch_order = None
+        best_switch_score = -999.0
+        already_active_ids = {id(m) for m in (battle.active_pokemon or []) if m is not None}
+
+        for o in valid_orders:
+            candidate = getattr(o, "order", None)
+            if candidate is None or isinstance(candidate, Move):
+                continue
+            if getattr(candidate, "fainted", True):
+                continue
+            if id(candidate) in already_active_ids:
+                continue
+            s = self._score_switch_in(candidate, battle)
+            if s > best_switch_score:
+                best_switch_score = s
+                best_switch_order = o
+
+        if best_switch_order is None:
+            return None
+
+        # Only switch if the candidate is clearly better than staying and attacking
+        if best_switch_score > best_move_score + SWITCH_THRESHOLD:
+            return best_switch_order
+
+        return None
+
+    def _choose_doubles_move(self, battle: AbstractBattle) -> BattleOrder:
+        """
+        Override to inject voluntary switching before move scoring.
+        Falls back to base class logic for all non-switch decisions.
+        """
+        if any(battle.force_switch):
+            return super()._choose_doubles_move(battle)
+
+        valid = battle.valid_orders
+        if not valid or not valid[0] or not valid[1]:
+            return Player.choose_default_move()
+
+        our_active = battle.active_pokemon
+        opp_active = battle.opponent_active_pokemon
+
+        attacker0 = our_active[0] if len(our_active) > 0 else None
+        attacker1 = our_active[1] if len(our_active) > 1 else None
+
+        def _slot_inactive(idx: int) -> bool:
+            if idx >= len(our_active):
+                return True
+            mon = our_active[idx]
+            return mon is None or getattr(mon, "fainted", False)
+
+        def _pass_order_for_slot(idx: int) -> SingleBattleOrder:
+            for o in valid[idx]:
+                if isinstance(o, PassBattleOrder):
+                    return o
+            return PassBattleOrder()
+
+        # Try voluntary switch first, fall back to best move order
+        if not _slot_inactive(0):
+            order0 = self._consider_voluntary_switch(attacker0, 0, valid[0], battle)
+            if order0 is None:
+                order0 = self._best_order_for_slot(
+                    attacker0, valid[0], our_active, opp_active, battle
+                )
+        else:
+            order0 = _pass_order_for_slot(0)
+
+        if not _slot_inactive(1):
+            order1 = self._consider_voluntary_switch(attacker1, 1, valid[1], battle)
+            if order1 is None:
+                order1 = self._best_order_for_slot(
+                    attacker1, valid[1], our_active, opp_active, battle
+                )
+        else:
+            order1 = _pass_order_for_slot(1)
+
+        # Prevent switching in the same mon to both slots
+        def _is_switch(o: SingleBattleOrder | None) -> bool:
+            if o is None:
+                return False
+            inner = getattr(o, "order", None)
+            return (
+                not isinstance(inner, Move)
+                and not isinstance(o, PassBattleOrder)
+            )
+
+        def _switch_species(o: SingleBattleOrder | None) -> str:
+            if o is None:
+                return ""
+            return str(getattr(getattr(o, "order", None), "species", "") or "").lower()
+
+        if _is_switch(order0) and _is_switch(order1):
+            if _switch_species(order0) == _switch_species(order1):
+                sp = _switch_species(order0)
+                print(
+                    f"[ADOLENCE SWITCH] {battle.battle_tag} dedup same_incoming={sp} "
+                    f"slot1_fallback_to_moves"
+                )
+                order1 = self._best_order_for_slot(
+                    attacker1, valid[1], our_active, opp_active, battle
+                )
+
+        if order0 is None:
+            pool = [
+                o
+                for o in valid[0]
+                if isinstance(getattr(o, "order", None), Move)
+                and getattr(o.order, "base_power", 0) > 0
+                and not self._is_single_target_ally_attack(o)
+            ]
+            order0 = random.choice(pool) if pool else _pass_order_for_slot(0)
+
+        if order1 is None:
+            pool = [
+                o
+                for o in valid[1]
+                if isinstance(getattr(o, "order", None), Move)
+                and getattr(o.order, "base_power", 0) > 0
+                and not self._is_single_target_ally_attack(o)
+            ]
+            order1 = random.choice(pool) if pool else _pass_order_for_slot(1)
+
+        return DoubleBattleOrder(order0, order1)
+
 
 async def main():
     # Regulation I format; same team via ConstantTeambuilder — AdolenceBot vs ToddlerBot.
@@ -398,7 +737,7 @@ async def main():
         account_configuration=AccountConfiguration(f"ToddlerBot {suffix2}", ""),
     )
 
-    total_battles = 1
+    total_battles = 200
     print(f"Running {total_battles} battles (AdolenceBot vs ToddlerBot)...")
 
     adolence_wins = 0
@@ -439,7 +778,7 @@ async def main():
     print("Done!")
     print(
         f"AdolenceBot winrate ({total_battles} battles): "
-        f"{adolence_wins}W / {toddler_wins}L / {ties}T → "
+        f"{adolence_wins}W / {toddler_wins}L / {ties}T -> "
         f"{winrate_pct:.2f}% wins (vs ToddlerBot)"
     )
 

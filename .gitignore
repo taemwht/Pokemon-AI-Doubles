@@ -26,3 +26,8 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Local generated outputs
+battle_results.csv
+processed_training_data.csv
+last_battle_debug.log
